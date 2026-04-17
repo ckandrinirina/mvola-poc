@@ -2,7 +2,7 @@
 
 > **Epic:** 03 — API Routes
 > **Size:** S
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,10 +10,10 @@ Create `src/app/api/mvola/token/route.ts` — a Next.js route handler that calls
 
 ## Acceptance Criteria
 
-- [ ] `POST /api/mvola/token` returns `{ access_token, expires_in }` with status 200
-- [ ] Calls `getToken()` from `src/lib/mvola/auth.ts` (does not call MVola directly)
-- [ ] Returns 500 with `{ error: string }` if token acquisition fails
-- [ ] No request body required
+- [x] `POST /api/mvola/token` returns `{ access_token, expires_in }` with status 200
+- [x] Calls `getToken()` from `src/lib/mvola/auth.ts` (does not call MVola directly)
+- [x] Returns 500 with `{ error: string }` if token acquisition fails
+- [x] No request body required
 
 ## Technical Notes
 
