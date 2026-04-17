@@ -2,7 +2,7 @@
 
 > **Epic:** 02 — MVola Core Library
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,16 +10,16 @@ Implement `src/lib/mvola/auth.ts` — the module that manages the MVola OAuth 2.
 
 ## Acceptance Criteria
 
-- [ ] `getToken()` is the only exported function
-- [ ] On first call, fetches a token via `POST https://devapi.mvola.mg/token` (or `api.mvola.mg` based on `MVOLA_ENV`)
-- [ ] Uses `Authorization: Basic Base64(MVOLA_CONSUMER_KEY:MVOLA_CONSUMER_SECRET)`
-- [ ] Request body is `grant_type=client_credentials&scope=EXT_INT_MVOLA_SCOPE` (URL-encoded)
-- [ ] On success, caches `{ access_token, expiresAt }` in a module-level variable
-- [ ] On subsequent calls within validity window, returns cached token without a network call
-- [ ] Refreshes when `Date.now() >= expiresAt - 60_000` (60s before expiry)
-- [ ] Throws a descriptive error if the MVola token endpoint returns non-200
-- [ ] Uses `MVolaToken` interface from `types.ts`
-- [ ] Reads `MVOLA_CONSUMER_KEY`, `MVOLA_CONSUMER_SECRET`, `MVOLA_ENV` from `process.env`
+- [x] `getToken()` is the only exported function
+- [x] On first call, fetches a token via `POST https://devapi.mvola.mg/token` (or `api.mvola.mg` based on `MVOLA_ENV`)
+- [x] Uses `Authorization: Basic Base64(MVOLA_CONSUMER_KEY:MVOLA_CONSUMER_SECRET)`
+- [x] Request body is `grant_type=client_credentials&scope=EXT_INT_MVOLA_SCOPE` (URL-encoded)
+- [x] On success, caches `{ access_token, expiresAt }` in a module-level variable
+- [x] On subsequent calls within validity window, returns cached token without a network call
+- [x] Refreshes when `Date.now() >= expiresAt - 60_000` (60s before expiry)
+- [x] Throws a descriptive error if the MVola token endpoint returns non-200
+- [x] Uses `MVolaToken` interface from `types.ts`
+- [x] Reads `MVOLA_CONSUMER_KEY`, `MVOLA_CONSUMER_SECRET`, `MVOLA_ENV` from `process.env`
 
 ## Technical Notes
 
