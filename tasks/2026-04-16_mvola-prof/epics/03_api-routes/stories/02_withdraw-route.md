@@ -2,7 +2,7 @@
 
 > **Epic:** 03 — API Routes
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,13 +10,13 @@ Create `src/app/api/mvola/withdraw/route.ts` — the primary payout initiation e
 
 ## Acceptance Criteria
 
-- [ ] `POST /api/mvola/withdraw` accepts `{ amount, playerMsisdn, description? }` JSON body
-- [ ] Returns 400 with `{ error: "amount and playerMsisdn are required" }` if either field is missing
-- [ ] Calls `getToken()` then `initiateWithdrawal()` — does not call MVola directly
-- [ ] Returns 200 with `{ correlationId, status: "pending" }` on success
-- [ ] Returns 502 with `{ error: "MVola API error", details: string }` on MVola failure
-- [ ] `amount` is passed as a string to MVola (not a number)
-- [ ] `description` defaults to `"Game withdrawal"` if not provided
+- [x] `POST /api/mvola/withdraw` accepts `{ amount, playerMsisdn, description? }` JSON body
+- [x] Returns 400 with `{ error: "amount and playerMsisdn are required" }` if either field is missing
+- [x] Calls `getToken()` then `initiateWithdrawal()` — does not call MVola directly
+- [x] Returns 200 with `{ correlationId, status: "pending" }` on success
+- [x] Returns 502 with `{ error: "MVola API error", details: string }` on MVola failure
+- [x] `amount` is passed as a string to MVola (not a number)
+- [x] `description` defaults to `"Game withdrawal"` if not provided
 
 ## Technical Notes
 
