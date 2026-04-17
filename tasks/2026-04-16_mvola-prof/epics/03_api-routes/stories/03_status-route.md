@@ -2,7 +2,7 @@
 
 > **Epic:** 03 — API Routes
 > **Size:** S
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,12 +10,12 @@ Create `src/app/api/mvola/status/[correlationId]/route.ts` — a dynamic route h
 
 ## Acceptance Criteria
 
-- [ ] `GET /api/mvola/status/[correlationId]` responds with `{ transactionStatus, serverCorrelationId, transactionReference }`
-- [ ] Uses the `correlationId` from the URL path parameter
-- [ ] Calls `getToken()` then `getTransactionStatus(correlationId, token)`
-- [ ] Returns 200 with the status response from MVola
-- [ ] Returns 502 with `{ error: string }` on MVola failure
-- [ ] `transactionStatus` values: `"pending"`, `"completed"`, or `"failed"`
+- [x] `GET /api/mvola/status/[correlationId]` responds with `{ transactionStatus, serverCorrelationId, transactionReference }`
+- [x] Uses the `correlationId` from the URL path parameter
+- [x] Calls `getToken()` then `getTransactionStatus(correlationId, token)`
+- [x] Returns 200 with the status response from MVola
+- [x] Returns 502 with `{ error: string }` on MVola failure
+- [x] `transactionStatus` values: `"pending"`, `"completed"`, or `"failed"`
 
 ## Technical Notes
 
