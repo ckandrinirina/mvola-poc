@@ -2,7 +2,7 @@
 
 > **Epic:** 02 — MVola Core Library
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,15 +10,15 @@ Implement `src/lib/mvola/client.ts` with two typed functions: `initiateWithdrawa
 
 ## Acceptance Criteria
 
-- [ ] `initiateWithdrawal(params, token)` sends `POST` to MVola merchant pay endpoint
-- [ ] `getTransactionStatus(correlationId, token)` sends `GET` to MVola status endpoint
-- [ ] Both functions attach all required headers: `Authorization`, `X-CorrelationID`, `UserAccountIdentifier`, `partnerName`, `Content-Type`, `UserLanguage`, `Version`, `Cache-Control`
-- [ ] `X-CorrelationID` is a unique UUID per request (use `uuid` or `crypto.randomUUID()`)
-- [ ] `UserAccountIdentifier` is formatted as `msisdn;{MVOLA_MERCHANT_MSISDN}`
-- [ ] Base URL is selected from `MVOLA_ENV` env var
-- [ ] Request body for `initiateWithdrawal` includes `requestDate` as ISO 8601 string and `requestingOrganisationTransactionReference` as `game-withdrawal-{uuid}`
-- [ ] Returns typed responses using interfaces from `types.ts`
-- [ ] Throws on non-200 responses with error detail from MVola response body
+- [x] `initiateWithdrawal(params, token)` sends `POST` to MVola merchant pay endpoint
+- [x] `getTransactionStatus(correlationId, token)` sends `GET` to MVola status endpoint
+- [x] Both functions attach all required headers: `Authorization`, `X-CorrelationID`, `UserAccountIdentifier`, `partnerName`, `Content-Type`, `UserLanguage`, `Version`, `Cache-Control`
+- [x] `X-CorrelationID` is a unique UUID per request (use `uuid` or `crypto.randomUUID()`)
+- [x] `UserAccountIdentifier` is formatted as `msisdn;{MVOLA_MERCHANT_MSISDN}`
+- [x] Base URL is selected from `MVOLA_ENV` env var
+- [x] Request body for `initiateWithdrawal` includes `requestDate` as ISO 8601 string and `requestingOrganisationTransactionReference` as `game-withdrawal-{uuid}`
+- [x] Returns typed responses using interfaces from `types.ts`
+- [x] Throws on non-200 responses with error detail from MVola response body
 
 ## Technical Notes
 
