@@ -33,7 +33,7 @@ Set up the Next.js 14+ project scaffold with TypeScript and Tailwind CSS, and co
 
 | # | Story | Size | Status |
 |---|-------|------|--------|
-| 01 | Scaffold Next.js 14+ project with TypeScript & Tailwind | S | TODO |
+| 01 | Scaffold Next.js 14+ project with TypeScript & Tailwind | S | DONE |
 | 02 | Environment config — `.env.example` and `.gitignore` | S | TODO |
 
 ## Acceptance Criteria
