@@ -2,7 +2,7 @@
 
 > **Epic:** 04 — Demo UI
 > **Size:** S
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,12 +10,12 @@ Implement `src/app/layout.tsx` (root HTML shell with Tailwind base styles) and `
 
 ## Acceptance Criteria
 
-- [ ] `layout.tsx` provides a valid HTML5 shell with `<html>`, `<body>`, Tailwind font classes
-- [ ] `layout.tsx` imports `globals.css` for Tailwind base styles
-- [ ] `page.tsx` is a React Server Component (no `"use client"`)
-- [ ] `page.tsx` renders a page title and the `<WithdrawForm />` component
-- [ ] Page is readable and has basic centering/padding via Tailwind
-- [ ] TypeScript compiles without errors
+- [x] `layout.tsx` provides a valid HTML5 shell with `<html>`, `<body>`, Tailwind font classes
+- [x] `layout.tsx` imports `globals.css` for Tailwind base styles
+- [x] `page.tsx` is a React Server Component (no `"use client"`)
+- [x] `page.tsx` renders a page title and the `<WithdrawForm />` component
+- [x] Page is readable and has basic centering/padding via Tailwind
+- [x] TypeScript compiles without errors
 
 ## Technical Notes
 
