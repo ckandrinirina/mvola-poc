@@ -34,8 +34,8 @@ This is a demo/PoC UI — the goal is clarity and functionality, not production 
 
 | # | Story | Size | Status |
 |---|-------|------|--------|
-| 01 | Root layout and `page.tsx` | S | TODO |
-| 02 | `WithdrawForm` component — form, submit, polling, status display | L | TODO |
+| 01 | Root layout and `page.tsx` | S | DONE |
+| 02 | `WithdrawForm` component — form, submit, polling, status display | L | DONE |
 
 ## Acceptance Criteria
 

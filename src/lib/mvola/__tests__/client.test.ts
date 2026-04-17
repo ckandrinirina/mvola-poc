@@ -120,7 +120,7 @@ describe("client.ts — initiateWithdrawal()", () => {
     expect(headers["UserAccountIdentifier"]).toBe("msisdn;0343500003");
     expect(headers["partnerName"]).toBe("TestPartner");
     expect(headers["Content-Type"]).toBe("application/json");
-    expect(headers["UserLanguage"]).toBe("en");
+    expect(headers["UserLanguage"]).toBe("FR");
     expect(headers["Version"]).toBe("1.0");
     expect(headers["Cache-Control"]).toBe("no-cache");
     expect(headers["X-CorrelationID"]).toBeDefined();
@@ -178,7 +178,7 @@ describe("client.ts — initiateWithdrawal()", () => {
     expect(new Date(body.requestDate).toISOString()).toBe(body.requestDate);
   });
 
-  it("includes requestingOrganisationTransactionReference as game-withdrawal-{uuid}", async () => {
+  it("includes requestingOrganisationTransactionReference as a UUID", async () => {
     mockFetchSuccess({ status: "pending", serverCorrelationId: "corr-123" });
     const { initiateWithdrawal } = await import("../client");
 
@@ -198,7 +198,7 @@ describe("client.ts — initiateWithdrawal()", () => {
     ];
     const body = JSON.parse(options.body as string);
     expect(body.requestingOrganisationTransactionReference).toMatch(
-      /^game-withdrawal-[0-9a-f-]{36}$/
+      /^[0-9a-f-]{36}$/
     );
   });
 
@@ -249,8 +249,8 @@ describe("client.ts — initiateWithdrawal()", () => {
     expect(body.metadata).toEqual(
       expect.arrayContaining([
         { key: "partnerName", value: "TestPartner" },
-        { key: "fc", value: "Ar" },
-        { key: "amountFc", value: "5000" },
+        { key: "fc", value: "USD" },
+        { key: "amountFc", value: "1" },
       ])
     );
   });
@@ -386,7 +386,7 @@ describe("client.ts — getTransactionStatus()", () => {
     expect(headers["UserAccountIdentifier"]).toBe("msisdn;0343500003");
     expect(headers["partnerName"]).toBe("TestPartner");
     expect(headers["Content-Type"]).toBe("application/json");
-    expect(headers["UserLanguage"]).toBe("en");
+    expect(headers["UserLanguage"]).toBe("FR");
     expect(headers["Version"]).toBe("1.0");
     expect(headers["Cache-Control"]).toBe("no-cache");
     expect(headers["X-CorrelationID"]).toBeDefined();

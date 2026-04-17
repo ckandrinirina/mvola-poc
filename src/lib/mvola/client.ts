@@ -40,17 +40,20 @@ function getBaseUrl(): string {
  * @param token - A valid MVola Bearer access token (from auth.ts)
  * @returns A record of all required headers
  */
-function buildHeaders(token: string): Record<string, string> {
-  return {
+function buildHeaders(token: string, callbackUrl?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: "*/*",
+    "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
+    Version: "1.0",
     "X-CorrelationID": crypto.randomUUID(),
+    UserLanguage: "FR",
     UserAccountIdentifier: `msisdn;${process.env.MVOLA_MERCHANT_MSISDN}`,
     partnerName: process.env.MVOLA_PARTNER_NAME!,
-    "Content-Type": "application/json",
-    UserLanguage: "en",
-    Version: "1.0",
     "Cache-Control": "no-cache",
   };
+  if (callbackUrl) headers["X-Callback-URL"] = callbackUrl;
+  return headers;
 }
 
 /**
@@ -91,20 +94,21 @@ export async function initiateWithdrawal(
     amount: params.amount,
     currency: params.currency,
     descriptionText: params.descriptionText,
-    requestingOrganisationTransactionReference: `game-withdrawal-${crypto.randomUUID()}`,
+    requestingOrganisationTransactionReference: crypto.randomUUID(),
+    originalTransactionReference: crypto.randomUUID(),
     requestDate: new Date().toISOString(),
     debitParty: [{ key: "msisdn", value: merchantMsisdn }],
     creditParty: [{ key: "msisdn", value: params.playerMsisdn }],
     metadata: [
       { key: "partnerName", value: partnerName },
-      { key: "fc", value: "Ar" },
-      { key: "amountFc", value: params.amount },
+      { key: "fc", value: "USD" },
+      { key: "amountFc", value: "1" },
     ],
   };
 
   const response = await fetch(url, {
     method: "POST",
-    headers: buildHeaders(token),
+    headers: buildHeaders(token, process.env.MVOLA_CALLBACK_URL),
     body: JSON.stringify(body),
   });
 
