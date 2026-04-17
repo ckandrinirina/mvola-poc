@@ -7,7 +7,9 @@
       "mcp__context7__query-docs",
       "Bash(npx create-next-app@latest *)",
       "Read(//private/tmp/mvola-prof-scaffold/src/**)",
-      "Read(//private/tmp/mvola-prof-scaffold/**)"
+      "Read(//private/tmp/mvola-prof-scaffold/**)",
+      "Bash(ls -la .env.example)",
+      "Bash(ls -la src/lib/mvola/types.ts)"
     ]
   }
 }
