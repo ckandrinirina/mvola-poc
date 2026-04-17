@@ -24,9 +24,9 @@ import { getTransactionStatus } from "@/lib/mvola/client";
  */
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { correlationId: string } }
+  { params }: { params: Promise<{ correlationId: string }> }
 ): Promise<NextResponse> {
-  const { correlationId } = params;
+  const { correlationId } = await params;
 
   try {
     const token = await getToken();
