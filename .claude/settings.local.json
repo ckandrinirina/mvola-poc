@@ -9,7 +9,11 @@
       "Read(//private/tmp/mvola-prof-scaffold/src/**)",
       "Read(//private/tmp/mvola-prof-scaffold/**)",
       "Bash(ls -la .env.example)",
-      "Bash(ls -la src/lib/mvola/types.ts)"
+      "Bash(ls -la src/lib/mvola/types.ts)",
+      "Bash(npm install *)",
+      "Bash(npx jest *)",
+      "Bash(npx tsc *)",
+      "Bash(npm test *)"
     ]
   }
 }

@@ -2,7 +2,7 @@
 
 > **Epic:** 03 — API Routes
 > **Size:** S
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,11 +10,11 @@ Create `src/app/api/mvola/callback/route.ts` — a webhook endpoint that receive
 
 ## Acceptance Criteria
 
-- [ ] `PUT /api/mvola/callback` accepts a JSON body matching `CallbackPayload` from `types.ts`
-- [ ] Logs the full callback payload to `console.log`
-- [ ] Returns `200 OK` with `{ received: true }` on success
-- [ ] Returns `200 OK` even if the payload is unexpected (to prevent MVola retries)
-- [ ] The route is accessible at the path MVola will call: `/api/mvola/callback`
+- [x] `PUT /api/mvola/callback` accepts a JSON body matching `CallbackPayload` from `types.ts`
+- [x] Logs the full callback payload to `console.log`
+- [x] Returns `200 OK` with `{ received: true }` on success
+- [x] Returns `200 OK` even if the payload is unexpected (to prevent MVola retries)
+- [x] The route is accessible at the path MVola will call: `/api/mvola/callback`
 
 ## Technical Notes
 
