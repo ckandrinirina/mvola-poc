@@ -2,7 +2,7 @@
 
 > **Epic:** 02 — MVola Core Library
 > **Size:** S
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,13 +10,13 @@ Create `src/lib/mvola/types.ts` with all TypeScript interfaces for MVola request
 
 ## Acceptance Criteria
 
-- [ ] `MVolaToken` interface defined with `access_token`, `scope`, `token_type`, `expires_in`
-- [ ] `WithdrawalRequest` interface defined with all required fields for the merchant pay POST body
-- [ ] `WithdrawalResponse` interface defined with `status`, `serverCorrelationId`
-- [ ] `TransactionStatusResponse` interface defined with `transactionStatus`, `serverCorrelationId`, `transactionReference`
-- [ ] `CallbackPayload` interface defined with all fields from the MVola webhook PUT body
-- [ ] Zero `any` types — all fields explicitly typed
-- [ ] File compiles without TypeScript errors
+- [x] `MVolaToken` interface defined with `access_token`, `scope`, `token_type`, `expires_in`
+- [x] `WithdrawalRequest` interface defined with all required fields for the merchant pay POST body
+- [x] `WithdrawalResponse` interface defined with `status`, `serverCorrelationId`
+- [x] `TransactionStatusResponse` interface defined with `transactionStatus`, `serverCorrelationId`, `transactionReference`
+- [x] `CallbackPayload` interface defined with all fields from the MVola webhook PUT body
+- [x] Zero `any` types — all fields explicitly typed
+- [x] File compiles without TypeScript errors
 
 ## Technical Notes
 

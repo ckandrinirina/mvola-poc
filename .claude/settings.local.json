@@ -4,7 +4,10 @@
       "WebSearch",
       "WebFetch(domain:github.com)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__query-docs"
+      "mcp__context7__query-docs",
+      "Bash(npx create-next-app@latest *)",
+      "Read(//private/tmp/mvola-prof-scaffold/src/**)",
+      "Read(//private/tmp/mvola-prof-scaffold/**)"
     ]
   }
 }

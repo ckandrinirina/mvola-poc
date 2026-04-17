@@ -2,7 +2,7 @@
 
 > **Epic:** 01 — Project Foundation
 > **Size:** S
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,10 +10,10 @@ Create the `.env.example` committed template with all required MVola environment
 
 ## Acceptance Criteria
 
-- [ ] `.env.example` is committed and contains all 7 required variable names with empty values
-- [ ] `.env.local` is listed in `.gitignore`
-- [ ] `MVOLA_ENV` defaults to `sandbox` in `.env.example`
-- [ ] Running `cp .env.example .env.local` gives a usable starting point
+- [x] `.env.example` is committed and contains all 7 required variable names with empty values
+- [x] `.env.local` is listed in `.gitignore`
+- [x] `MVOLA_ENV` defaults to `sandbox` in `.env.example`
+- [x] Running `cp .env.example .env.local` gives a usable starting point
 
 ## Technical Notes
 
