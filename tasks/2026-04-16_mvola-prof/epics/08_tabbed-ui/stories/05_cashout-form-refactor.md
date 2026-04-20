@@ -2,7 +2,7 @@
 
 > **Epic:** 08 — Tabbed Demo UI
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,18 +10,18 @@ Refactor the existing `src/components/WithdrawForm.tsx` into `src/components/Cas
 
 ## Acceptance Criteria
 
-- [ ] Component is a React client component (`"use client"`)
-- [ ] Reads `msisdn`, `balance`, `refreshBalance` from `useMsisdnContext()`
-- [ ] No separate phone-number input in this component (header owns it)
-- [ ] Amount input defaults to `balance` on mount and on balance change; capped at balance; validation rejects > balance
-- [ ] On submit POSTs `{ msisdn, amount }` to `/api/mvola/withdraw`
-- [ ] On 409: displays "Insufficient funds" with the returned `balance` and `requested`
-- [ ] On 200: stores `correlationId`, polls `/api/mvola/status/:id` every 3 s
-- [ ] On `completed`: "Cash-out successful" banner, refresh balance, disable form until reset
-- [ ] On `failed`: "Cash-out failed — wallet refunded" banner, refresh balance (shows refunded amount)
-- [ ] Old `WithdrawForm.tsx` and its tests are removed or moved to the new filename
-- [ ] The old `page.tsx` import of `WithdrawForm` is updated in story 08-07 — this story does not need to touch `page.tsx`
-- [ ] Component tests cover: default amount = balance, 409 handling, completed path, failed path with "refunded" messaging, refreshBalance called on terminal transitions
+- [x] Component is a React client component (`"use client"`)
+- [x] Reads `msisdn`, `balance`, `refreshBalance` from `useMsisdnContext()`
+- [x] No separate phone-number input in this component (header owns it)
+- [x] Amount input defaults to `balance` on mount and on balance change; capped at balance; validation rejects > balance
+- [x] On submit POSTs `{ msisdn, amount }` to `/api/mvola/withdraw`
+- [x] On 409: displays "Insufficient funds" with the returned `balance` and `requested`
+- [x] On 200: stores `correlationId`, polls `/api/mvola/status/:id` every 3 s
+- [x] On `completed`: "Cash-out successful" banner, refresh balance, disable form until reset
+- [x] On `failed`: "Cash-out failed — wallet refunded" banner, refresh balance (shows refunded amount)
+- [x] Old `WithdrawForm.tsx` and its tests are removed or moved to the new filename
+- [x] The old `page.tsx` import of `WithdrawForm` is updated (done in this story to avoid broken build)
+- [x] Component tests cover: default amount = balance, 409 handling, completed path, failed path with "refunded" messaging, refreshBalance called on terminal transitions
 
 ## Technical Notes
 
