@@ -2,7 +2,7 @@
 
 > **Epic:** 08 — Tabbed Demo UI
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,14 +10,14 @@ Create `src/components/WalletHeader.tsx` — the top-of-page bar that captures t
 
 ## Acceptance Criteria
 
-- [ ] Component is a React client component (`"use client"`)
-- [ ] Renders an MSISDN input; the value is persisted to `localStorage` under key `mvola-prof.msisdn`
-- [ ] On mount, reads the persisted MSISDN (if any) and populates the input
-- [ ] Displays the balance formatted as Ariary (e.g. `5 000 Ar`)
-- [ ] While an MSISDN is set, polls `GET /api/wallet/:msisdn/balance` every 2000 ms
-- [ ] Polling stops when the MSISDN is cleared or the component unmounts
-- [ ] Provides a React context (`MsisdnContext`) exposing `{ msisdn, setMsisdn, balance, refreshBalance }`
-- [ ] Component tests cover: initial read from localStorage, write on change, polling starts/stops, balance renders, refreshBalance triggers immediate fetch
+- [x] Component is a React client component (`"use client"`)
+- [x] Renders an MSISDN input; the value is persisted to `localStorage` under key `mvola-prof.msisdn`
+- [x] On mount, reads the persisted MSISDN (if any) and populates the input
+- [x] Displays the balance formatted as Ariary (e.g. `5 000 Ar`)
+- [x] While an MSISDN is set, polls `GET /api/wallet/:msisdn/balance` every 2000 ms
+- [x] Polling stops when the MSISDN is cleared or the component unmounts
+- [x] Provides a React context (`MsisdnContext`) exposing `{ msisdn, setMsisdn, balance, refreshBalance }`
+- [x] Component tests cover: initial read from localStorage, write on change, polling starts/stops, balance renders, refreshBalance triggers immediate fetch
 
 ## Technical Notes
 
