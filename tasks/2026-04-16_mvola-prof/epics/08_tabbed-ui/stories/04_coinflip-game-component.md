@@ -2,7 +2,7 @@
 
 > **Epic:** 08 — Tabbed Demo UI
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,16 +10,16 @@ Create `src/components/CoinFlipGame.tsx` — the play-tab body. Reads `msisdn`, 
 
 ## Acceptance Criteria
 
-- [ ] Component is a React client component (`"use client"`)
-- [ ] Disabled when `msisdn` is empty or `balance` is 0
-- [ ] Bet input: positive integer, capped at current `balance`
-- [ ] Heads/tails selector (two buttons or a radio group)
-- [ ] On submit POSTs `{ msisdn, bet, choice }` to `/api/game/coinflip`
-- [ ] While awaiting: displays a 500–1500 ms "flipping…" animation (Tailwind transitions, no new libs)
-- [ ] On 200: displays outcome (`heads` / `tails`), win/loss banner (green / red), `delta` with sign, `balanceAfter`; calls `refreshBalance()`
-- [ ] On 409: displays "Insufficient funds" with the returned balance
-- [ ] On 400: displays the validation message
-- [ ] Component tests cover: disabled states, win rendering, loss rendering, 409 handling, refreshBalance call on success
+- [x] Component is a React client component (`"use client"`)
+- [x] Disabled when `msisdn` is empty or `balance` is 0
+- [x] Bet input: positive integer, capped at current `balance`
+- [x] Heads/tails selector (two buttons or a radio group)
+- [x] On submit POSTs `{ msisdn, bet, choice }` to `/api/game/coinflip`
+- [x] While awaiting: displays a 500–1500 ms "flipping…" animation (Tailwind transitions, no new libs)
+- [x] On 200: displays outcome (`heads` / `tails`), win/loss banner (green / red), `delta` with sign, `balanceAfter`; calls `refreshBalance()`
+- [x] On 409: displays "Insufficient funds" with the returned balance
+- [x] On 400: displays the validation message
+- [x] Component tests cover: disabled states, win rendering, loss rendering, 409 handling, refreshBalance call on success
 
 ## Technical Notes
 
