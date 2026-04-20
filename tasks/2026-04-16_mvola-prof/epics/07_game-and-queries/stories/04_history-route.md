@@ -2,7 +2,7 @@
 
 > **Epic:** 07 — Game & Wallet Queries
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,12 +10,12 @@ Create `src/app/api/wallet/[msisdn]/history/route.ts` — a read-only endpoint r
 
 ## Acceptance Criteria
 
-- [ ] `GET /api/wallet/[msisdn]/history` returns 200 with `{ msisdn, entries: Array<TransactionEntry | GameEntry> }`
-- [ ] Transaction entry shape: `{ kind: "transaction", localTxId, correlationId, direction, amount, status, walletSettled, mvolaReference?, createdAt, updatedAt }`
-- [ ] Game entry shape: `{ kind: "game", sessionId, bet, choice, outcome, result, delta, balanceAfter, playedAt }`
-- [ ] Entries sorted by timestamp descending (use `createdAt` for transactions, `playedAt` for games)
-- [ ] Empty array for unknown MSISDN (200 status, not 404)
-- [ ] Route tests cover: pure-deposit history, pure-game history, mixed history with correct sort order, empty case
+- [x] `GET /api/wallet/[msisdn]/history` returns 200 with `{ msisdn, entries: Array<TransactionEntry | GameEntry> }`
+- [x] Transaction entry shape: `{ kind: "transaction", localTxId, correlationId, direction, amount, status, walletSettled, mvolaReference?, createdAt, updatedAt }`
+- [x] Game entry shape: `{ kind: "game", sessionId, bet, choice, outcome, result, delta, balanceAfter, playedAt }`
+- [x] Entries sorted by timestamp descending (use `createdAt` for transactions, `playedAt` for games)
+- [x] Empty array for unknown MSISDN (200 status, not 404)
+- [x] Route tests cover: pure-deposit history, pure-game history, mixed history with correct sort order, empty case
 
 ## Technical Notes
 
