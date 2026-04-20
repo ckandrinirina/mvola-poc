@@ -2,7 +2,7 @@
 
 > **Epic:** 05 — State Store Layer
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,20 +10,20 @@ Create the wallet store — a module-level `Map<string, WalletState>` with typed
 
 ## Acceptance Criteria
 
-- [ ] `getWallet(msisdn: string): WalletState | undefined` returns the stored wallet or `undefined`
-- [ ] `ensureWallet(msisdn: string): WalletState` returns an existing wallet or creates a zero-balance one (idempotent)
-- [ ] `creditWallet(msisdn: string, amount: number): WalletState`:
-  - [ ] Creates a wallet via `ensureWallet` if missing
-  - [ ] Increments `balance` by `amount` and bumps `updatedAt`
-  - [ ] Throws `Error` (not `InsufficientFundsError`) if `amount <= 0` or not an integer
-- [ ] `debitWallet(msisdn: string, amount: number): WalletState`:
-  - [ ] Throws `InsufficientFundsError` when the wallet doesn't exist or `balance < amount`
-  - [ ] Otherwise decrements `balance` by `amount` and bumps `updatedAt`
-  - [ ] Throws `Error` if `amount <= 0` or not an integer
-- [ ] `resetAll(): void` clears the map — test-only helper, callable from jest `beforeEach`
-- [ ] The underlying `Map` is module-private and NOT exported
-- [ ] Unit tests cover: empty-lookup, ensureWallet creates once and is idempotent, credit from empty, credit-then-debit, overdraft throws `InsufficientFundsError` with expected payload, non-integer/negative rejection, resetAll
-- [ ] Tests live in `src/lib/store/__tests__/wallets.test.ts` and pass under the existing jest config
+- [x] `getWallet(msisdn: string): WalletState | undefined` returns the stored wallet or `undefined`
+- [x] `ensureWallet(msisdn: string): WalletState` returns an existing wallet or creates a zero-balance one (idempotent)
+- [x] `creditWallet(msisdn: string, amount: number): WalletState`:
+  - [x] Creates a wallet via `ensureWallet` if missing
+  - [x] Increments `balance` by `amount` and bumps `updatedAt`
+  - [x] Throws `Error` (not `InsufficientFundsError`) if `amount <= 0` or not an integer
+- [x] `debitWallet(msisdn: string, amount: number): WalletState`:
+  - [x] Throws `InsufficientFundsError` when the wallet doesn't exist or `balance < amount`
+  - [x] Otherwise decrements `balance` by `amount` and bumps `updatedAt`
+  - [x] Throws `Error` if `amount <= 0` or not an integer
+- [x] `resetAll(): void` clears the map — test-only helper, callable from jest `beforeEach`
+- [x] The underlying `Map` is module-private and NOT exported
+- [x] Unit tests cover: empty-lookup, ensureWallet creates once and is idempotent, credit from empty, credit-then-debit, overdraft throws `InsufficientFundsError` with expected payload, non-integer/negative rejection, resetAll
+- [x] Tests live in `src/lib/store/__tests__/wallets.test.ts` and pass under the existing jest config
 
 ## Technical Notes
 
