@@ -2,7 +2,7 @@
 
 > **Epic:** 08 — Tabbed Demo UI
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,18 +10,18 @@ Create `src/components/DepositForm.tsx` — the deposit tab body. Reads the acti
 
 ## Acceptance Criteria
 
-- [ ] Component is a React client component (`"use client"`)
-- [ ] Reads `msisdn` and `refreshBalance` from `useMsisdnContext()`
-- [ ] Amount input accepts positive integers only
-- [ ] Disabled when `msisdn` is empty
-- [ ] On submit POSTs `{ msisdn, amount }` to `/api/mvola/deposit`
-- [ ] Handles 400 by displaying the error message; 502 by displaying "MVola API error"
-- [ ] On 200 success, stores the returned `correlationId` and starts polling `/api/mvola/status/:correlationId` every 3000 ms
-- [ ] Displays intermediate status (`pending`) with a spinner
-- [ ] Stops polling and calls `refreshBalance()` on `completed`; displays success banner
-- [ ] Stops polling and displays "Deposit failed" banner on `failed`
-- [ ] Cleans up the interval on unmount or when the user initiates a new deposit
-- [ ] Component tests cover: validation, happy path (mock fetch returning pending then completed), 400 validation error, failed status handling, balance refresh is called on completion
+- [x] Component is a React client component (`"use client"`)
+- [x] Reads `msisdn` and `refreshBalance` from `useMsisdnContext()`
+- [x] Amount input accepts positive integers only
+- [x] Disabled when `msisdn` is empty
+- [x] On submit POSTs `{ msisdn, amount }` to `/api/mvola/deposit`
+- [x] Handles 400 by displaying the error message; 502 by displaying "MVola API error"
+- [x] On 200 success, stores the returned `correlationId` and starts polling `/api/mvola/status/:correlationId` every 3000 ms
+- [x] Displays intermediate status (`pending`) with a spinner
+- [x] Stops polling and calls `refreshBalance()` on `completed`; displays success banner
+- [x] Stops polling and displays "Deposit failed" banner on `failed`
+- [x] Cleans up the interval on unmount or when the user initiates a new deposit
+- [x] Component tests cover: validation, happy path (mock fetch returning pending then completed), 400 validation error, failed status handling, balance refresh is called on completion
 
 ## Technical Notes
 
