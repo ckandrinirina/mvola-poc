@@ -2,7 +2,7 @@
 
 > **Epic:** 07 — Game & Wallet Queries
 > **Size:** S
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 

@@ -2,7 +2,7 @@
 
 > **Epic:** 06 — Wallet-Aware MVola Flows
 > **Size:** L
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
