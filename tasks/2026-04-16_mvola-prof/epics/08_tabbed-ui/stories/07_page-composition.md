@@ -2,7 +2,7 @@
 
 > **Epic:** 08 — Tabbed Demo UI
 > **Size:** S
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,19 +10,19 @@ Refactor `src/app/page.tsx` to compose the header and tabbed layout built in the
 
 ## Acceptance Criteria
 
-- [ ] `src/app/page.tsx` renders `<WalletHeader>` with `<TabbedLayout tabs={[...]}>` as a child
-- [ ] Tabs: `[{ label: "Deposit", content: <DepositForm /> }, { label: "Play", content: <CoinFlipGame /> }, { label: "Cash-out", content: <CashOutForm /> }, { label: "History", content: <TransactionHistory /> }]`
-- [ ] `layout.tsx` metadata updated: title "MVola PoC — Wallet Demo", description mentions the full round-trip
-- [ ] Old `WithdrawForm` import is removed (replaced by `CashOutForm` — was handled by story 08-05 at file level, here we update the import site)
-- [ ] Manual browser verification against sandbox:
-  - [ ] Enter MSISDN `0343500003` → balance shows 0 Ar
-  - [ ] Deposit 10000 → poll succeeds → header shows 10000 Ar
-  - [ ] Play several rounds with various bets → balance drifts as expected
-  - [ ] Cash out remaining balance → poll succeeds → header shows 0 Ar
-  - [ ] History tab lists every deposit, every round, and the cash-out in chronological order
-  - [ ] Hard-reload the page → MSISDN persists (from localStorage), balance is still 0 (matches server state)
-  - [ ] Restart `npm run dev` → MSISDN persists in localStorage but balance resets to 0 (expected per `state-management.md`)
-- [ ] `npm run build` passes with no TypeScript errors
+- [x] `src/app/page.tsx` renders `<WalletHeader>` with `<TabbedLayout tabs={[...]}>` as a child
+- [x] Tabs: `[{ label: "Deposit", content: <DepositForm /> }, { label: "Play", content: <CoinFlipGame /> }, { label: "Cash-out", content: <CashOutForm /> }, { label: "History", content: <TransactionHistory /> }]`
+- [x] `layout.tsx` metadata updated: title "MVola PoC — Wallet Demo", description mentions the full round-trip
+- [x] Old `WithdrawForm` import is removed (replaced by `CashOutForm` — was handled by story 08-05 at file level, here we update the import site)
+- [x] Manual browser verification against sandbox:
+  - [x] Enter MSISDN `0343500003` → balance shows 0 Ar
+  - [x] Deposit 10000 → poll succeeds → header shows 10000 Ar
+  - [x] Play several rounds with various bets → balance drifts as expected
+  - [x] Cash out remaining balance → poll succeeds → header shows 0 Ar
+  - [x] History tab lists every deposit, every round, and the cash-out in chronological order
+  - [x] Hard-reload the page → MSISDN persists (from localStorage), balance is still 0 (matches server state)
+  - [x] Restart `npm run dev` → MSISDN persists in localStorage but balance resets to 0 (expected per `state-management.md`)
+- [x] `npm run build` passes with no TypeScript errors
 
 ## Technical Notes
 
@@ -73,3 +73,32 @@ export default function Home() {
 
 - **Epic:** 08_tabbed-ui
 - **Spec reference:** `docs/architecture/folder-structure.md` § `src/components/`, `docs/architecture/dev-guide.md` § Testing the Full Round-Trip
+
+---
+
+## Implementation Summary
+
+**Completed:** 2026-04-20
+**QA Iterations:** 1
+**Files created:** 0
+**Files modified:** 3
+
+### What Was Implemented
+- `src/app/page.tsx` rewritten to compose `WalletHeader` + `TabbedLayout` with all four tab components
+- `src/app/layout.tsx` metadata updated to "MVola PoC — Wallet Demo"
+- `CoinFlipGame` refactored to consume `useMsisdnContext()` directly (matching the pattern of `DepositForm` and `CashOutForm`) — the prior props-based interface was incompatible with zero-prop composition
+
+### Files Touched
+
+```
+MODIFIED src/app/page.tsx
+MODIFIED src/app/layout.tsx
+MODIFIED src/components/CoinFlipGame.tsx
+```
+
+### SOLID Compliance
+- S: `page.tsx` is a pure composition root; each component owns its own logic
+- O/L/I/D: No new abstractions needed — existing context pattern extended naturally
+
+### Notes
+`CoinFlipGame` was originally implemented with explicit props (`msisdn`, `balance`, `refreshBalance`). Updated to use `useMsisdnContext()` internally so it can be rendered as `<CoinFlipGame />` in the composition root, consistent with `DepositForm` and `CashOutForm`.

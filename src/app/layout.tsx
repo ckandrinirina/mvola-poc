@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MVola Withdrawal Demo",
-  description: "Demo UI for MVola payout integration",
+  title: "MVola PoC — Wallet Demo",
+  description:
+    "Full round-trip demo: deposit, coin-flip game, cash-out, and transaction history via MVola sandbox.",
 };
 
 export default function RootLayout({

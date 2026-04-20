@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMsisdnContext } from "./WalletHeader";
 
 // ---- Types ------------------------------------------------------------------
 
@@ -19,24 +20,10 @@ interface ErrorData {
   balance?: number;
 }
 
-// ---- Props ------------------------------------------------------------------
-
-interface CoinFlipGameProps {
-  msisdn: string;
-  balance: number;
-  refreshBalance: () => void;
-}
-
 // ---- Component --------------------------------------------------------------
 
-/**
- * CoinFlipGame — the play-tab body.
- *
- * Accepts msisdn, balance, and refreshBalance as props (passed from MsisdnContext
- * via the parent). Provides a bet input, heads/tails selector, and a Flip button
- * that POSTs to /api/game/coinflip. Handles win, loss, 409, and 400 responses.
- */
-export function CoinFlipGame({ msisdn, balance, refreshBalance }: CoinFlipGameProps) {
+export function CoinFlipGame() {
+  const { msisdn, balance, refreshBalance } = useMsisdnContext();
   const [bet, setBet] = useState("1");
   const [choice, setChoice] = useState<GameChoice>("heads");
   const [phase, setPhase] = useState<Phase>("idle");

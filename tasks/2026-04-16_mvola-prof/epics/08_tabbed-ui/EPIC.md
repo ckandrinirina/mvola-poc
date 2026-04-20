@@ -38,13 +38,13 @@ All components are React client components that call the server routes created i
 
 | # | Story | Size | Status |
 |---|-------|------|--------|
-| 01 | `WalletHeader` component — MSISDN input + balance polling | M | TODO |
-| 02 | `TabbedLayout` component — tab switcher | S | TODO |
-| 03 | `DepositForm` component — deposit POST + polling | M | TODO |
-| 04 | `CoinFlipGame` component — bet + play + result | M | TODO |
-| 05 | Refactor `WithdrawForm` → `CashOutForm` — wallet-aware | M | TODO |
-| 06 | `TransactionHistory` component — merged history list | M | TODO |
-| 07 | Compose `page.tsx` + `layout.tsx` | S | TODO |
+| 01 | `WalletHeader` component — MSISDN input + balance polling | M | DONE |
+| 02 | `TabbedLayout` component — tab switcher | S | DONE |
+| 03 | `DepositForm` component — deposit POST + polling | M | DONE |
+| 04 | `CoinFlipGame` component — bet + play + result | M | DONE |
+| 05 | Refactor `WithdrawForm` → `CashOutForm` — wallet-aware | M | DONE |
+| 06 | `TransactionHistory` component — merged history list | M | DONE |
+| 07 | Compose `page.tsx` + `layout.tsx` | S | DONE |
 
 ## Acceptance Criteria
 
