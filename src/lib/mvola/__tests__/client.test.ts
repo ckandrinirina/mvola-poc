@@ -291,6 +291,239 @@ describe("client.ts — initiateWithdrawal()", () => {
   });
 });
 
+describe("client.ts — initiateDeposit()", () => {
+  const ORIGINAL_ENV = process.env;
+
+  beforeEach(() => {
+    jest.resetModules();
+    process.env = {
+      ...ORIGINAL_ENV,
+      MVOLA_ENV: "sandbox",
+      MVOLA_MERCHANT_MSISDN: "0343500003",
+      MVOLA_PARTNER_NAME: "TestPartner",
+    };
+  });
+
+  afterEach(() => {
+    process.env = ORIGINAL_ENV;
+    jest.restoreAllMocks();
+  });
+
+  function mockFetchSuccess(body: object) {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => body,
+    } as Response);
+  }
+
+  function mockFetchError(status: number, body: object | string) {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status,
+      json: async () =>
+        typeof body === "string" ? { error: body } : body,
+      text: async () =>
+        typeof body === "string" ? body : JSON.stringify(body),
+    } as unknown as Response);
+  }
+
+  it("sends POST to the same sandbox merchantpay endpoint as initiateWithdrawal", async () => {
+    mockFetchSuccess({ status: "pending", serverCorrelationId: "corr-deposit-1" });
+    const { initiateDeposit } = await import("../client");
+
+    await initiateDeposit(
+      { msisdn: "0343500004", amount: "5000" },
+      "test-token"
+    );
+
+    const [url, options] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      RequestInit
+    ];
+    expect(url).toBe(
+      "https://devapi.mvola.mg/mvola/mm/transactions/type/merchantpay/1.0.0/"
+    );
+    expect(options.method).toBe("POST");
+  });
+
+  it("sets debitParty to player MSISDN and creditParty to merchant MSISDN", async () => {
+    mockFetchSuccess({ status: "pending", serverCorrelationId: "corr-deposit-1" });
+    const { initiateDeposit } = await import("../client");
+
+    await initiateDeposit(
+      { msisdn: "0343500004", amount: "5000" },
+      "test-token"
+    );
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      RequestInit
+    ];
+    const body = JSON.parse(options.body as string);
+
+    // For deposit: player is the debitParty (pays in), merchant is the creditParty (receives)
+    expect(body.debitParty).toEqual([{ key: "msisdn", value: "0343500004" }]);
+    expect(body.creditParty).toEqual([{ key: "msisdn", value: "0343500003" }]);
+  });
+
+  it("uses default description 'Game deposit' when description is not provided", async () => {
+    mockFetchSuccess({ status: "pending", serverCorrelationId: "corr-deposit-1" });
+    const { initiateDeposit } = await import("../client");
+
+    await initiateDeposit(
+      { msisdn: "0343500004", amount: "5000" },
+      "test-token"
+    );
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      RequestInit
+    ];
+    const body = JSON.parse(options.body as string);
+    expect(body.descriptionText).toBe("Game deposit");
+  });
+
+  it("uses provided description when given", async () => {
+    mockFetchSuccess({ status: "pending", serverCorrelationId: "corr-deposit-1" });
+    const { initiateDeposit } = await import("../client");
+
+    await initiateDeposit(
+      { msisdn: "0343500004", amount: "5000", description: "Custom deposit" },
+      "test-token"
+    );
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      RequestInit
+    ];
+    const body = JSON.parse(options.body as string);
+    expect(body.descriptionText).toBe("Custom deposit");
+  });
+
+  it("uses default currency 'Ar' when currency is not provided", async () => {
+    mockFetchSuccess({ status: "pending", serverCorrelationId: "corr-deposit-1" });
+    const { initiateDeposit } = await import("../client");
+
+    await initiateDeposit(
+      { msisdn: "0343500004", amount: "5000" },
+      "test-token"
+    );
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      RequestInit
+    ];
+    const body = JSON.parse(options.body as string);
+    expect(body.currency).toBe("Ar");
+  });
+
+  it("includes metadata with partnerName, fc, and amountFc", async () => {
+    mockFetchSuccess({ status: "pending", serverCorrelationId: "corr-deposit-1" });
+    const { initiateDeposit } = await import("../client");
+
+    await initiateDeposit(
+      { msisdn: "0343500004", amount: "5000" },
+      "test-token"
+    );
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      RequestInit
+    ];
+    const body = JSON.parse(options.body as string);
+
+    expect(body.metadata).toEqual(
+      expect.arrayContaining([
+        { key: "partnerName", value: "TestPartner" },
+        { key: "fc", value: "Ar" },
+        { key: "amountFc", value: "5000" },
+      ])
+    );
+  });
+
+  it("includes requestDate as ISO 8601 string in the body", async () => {
+    mockFetchSuccess({ status: "pending", serverCorrelationId: "corr-deposit-1" });
+    const { initiateDeposit } = await import("../client");
+
+    await initiateDeposit(
+      { msisdn: "0343500004", amount: "5000" },
+      "test-token"
+    );
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      RequestInit
+    ];
+    const body = JSON.parse(options.body as string);
+    expect(body.requestDate).toBeDefined();
+    expect(new Date(body.requestDate).toISOString()).toBe(body.requestDate);
+  });
+
+  it("includes requestingOrganisationTransactionReference as a UUID", async () => {
+    mockFetchSuccess({ status: "pending", serverCorrelationId: "corr-deposit-1" });
+    const { initiateDeposit } = await import("../client");
+
+    await initiateDeposit(
+      { msisdn: "0343500004", amount: "5000" },
+      "test-token"
+    );
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      RequestInit
+    ];
+    const body = JSON.parse(options.body as string);
+    expect(body.requestingOrganisationTransactionReference).toBeDefined();
+    expect(typeof body.requestingOrganisationTransactionReference).toBe("string");
+    expect(body.requestingOrganisationTransactionReference.length).toBeGreaterThan(0);
+  });
+
+  it("uses buildHeaders (attaches required headers)", async () => {
+    mockFetchSuccess({ status: "pending", serverCorrelationId: "corr-deposit-1" });
+    const { initiateDeposit } = await import("../client");
+
+    await initiateDeposit(
+      { msisdn: "0343500004", amount: "5000" },
+      "my-deposit-token"
+    );
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      RequestInit
+    ];
+    const headers = options.headers as Record<string, string>;
+
+    expect(headers["Authorization"]).toBe("Bearer my-deposit-token");
+    expect(headers["UserAccountIdentifier"]).toBe("msisdn;0343500003");
+    expect(headers["partnerName"]).toBe("TestPartner");
+    expect(headers["Content-Type"]).toBe("application/json");
+    expect(headers["X-CorrelationID"]).toBeDefined();
+  });
+
+  it("propagates errors via throwOnError on non-200 response", async () => {
+    mockFetchError(400, { errorCode: "ERR001", errorMessage: "Bad Request" });
+    const { initiateDeposit } = await import("../client");
+
+    await expect(
+      initiateDeposit({ msisdn: "0343500004", amount: "5000" }, "test-token")
+    ).rejects.toThrow(/400/);
+  });
+
+  it("returns a typed response with status and serverCorrelationId", async () => {
+    mockFetchSuccess({ status: "pending", serverCorrelationId: "corr-deposit-abc" });
+    const { initiateDeposit } = await import("../client");
+
+    const result = await initiateDeposit(
+      { msisdn: "0343500004", amount: "5000" },
+      "test-token"
+    );
+
+    expect(result.status).toBe("pending");
+    expect(result.serverCorrelationId).toBe("corr-deposit-abc");
+  });
+});
+
 describe("client.ts — getTransactionStatus()", () => {
   const ORIGINAL_ENV = process.env;
 
