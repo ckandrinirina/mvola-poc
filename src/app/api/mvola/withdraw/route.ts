@@ -21,11 +21,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "@/lib/mvola/auth";
 import { initiateWithdrawal } from "@/lib/mvola/client";
-import { createTransaction } from "@/lib/store/transactions";
+import { createTransaction, getTransactionByCorrelationId } from "@/lib/store/transactions";
 import { creditWallet, debitWallet } from "@/lib/store/wallets";
 import { InsufficientFundsError } from "@/lib/mvola/types";
+import { reconcileTransaction } from "@/lib/mvola/reconcile";
 
 const DEFAULT_DESCRIPTION = "Game withdrawal";
+const SANDBOX_AUTO_COMPLETE_MS = 3000;
 
 /**
  * Parsed, validated request body. Only produced after validation succeeds.
@@ -121,25 +123,36 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (reserveFailure) return reserveFailure;
 
   // --- 3. Call MVola; refund the wallet on any sync error ---
-  let mvolaResponse;
-  try {
-    const token = await getToken();
-    mvolaResponse = await initiateWithdrawal(
-      {
-        amount: String(amount),
-        currency: "Ar",
-        descriptionText: description,
-        playerMsisdn: msisdn,
-      },
-      token,
-    );
-  } catch (err) {
-    creditWallet(msisdn, amount); // refund
-    const details = err instanceof Error ? err.message : String(err);
-    return NextResponse.json(
-      { error: "MVola API error", details },
-      { status: 502 },
-    );
+  // Sandbox-only shim: the MVola developer sandbox does not support the
+  // payout direction (merchant → customer) for this partner account, so
+  // calling initiateWithdrawal() always returns 4002. Skip the MVola call
+  // when not in production and generate a fake correlationId that the
+  // auto-complete timer below will reconcile. Production still hits MVola.
+  const isSandbox = process.env.MVOLA_ENV !== "production";
+  let correlationId: string;
+  if (isSandbox) {
+    correlationId = crypto.randomUUID();
+  } else {
+    try {
+      const token = await getToken();
+      const mvolaResponse = await initiateWithdrawal(
+        {
+          amount: String(amount),
+          currency: "Ar",
+          descriptionText: description,
+          playerMsisdn: msisdn,
+        },
+        token,
+      );
+      correlationId = mvolaResponse.serverCorrelationId;
+    } catch (err) {
+      creditWallet(msisdn, amount); // refund
+      const details = err instanceof Error ? err.message : String(err);
+      return NextResponse.json(
+        { error: "MVola API error", details },
+        { status: 502 },
+      );
+    }
   }
 
   // --- 4. Record the transaction; wallet has already been settled ---
@@ -147,9 +160,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     msisdn,
     direction: "withdraw",
     amount,
-    correlationId: mvolaResponse.serverCorrelationId,
+    correlationId,
     walletSettled: true,
   });
+
+  // Sandbox demo: auto-complete after a short delay so the pending → completed
+  // transition is visible without relying on MVola (which never fires the
+  // callback in sandbox for the payout direction).
+  if (isSandbox) {
+    const timer = setTimeout(() => {
+      const latest = getTransactionByCorrelationId(record.correlationId);
+      if (latest && latest.status === "pending") {
+        reconcileTransaction(latest, "completed", `MVL-SANDBOX-${record.localTxId.slice(0, 8)}`);
+      }
+    }, SANDBOX_AUTO_COMPLETE_MS);
+    timer.unref?.();
+  }
 
   return NextResponse.json({
     correlationId: record.correlationId,

@@ -35,6 +35,23 @@ export async function GET(
 ): Promise<NextResponse> {
   const { correlationId } = await params;
 
+  // Short-circuit: if the local record has reached a terminal state (via the
+  // callback route or sandbox auto-complete), return local truth without
+  // hitting MVola. In sandbox specifically, MVola often can't recognise the
+  // correlationId anyway (withdraw uses a fake one because the payout
+  // direction is unsupported). Local state + the callback route are the
+  // source of truth for the UI.
+  const localRecord = getTransactionByCorrelationId(correlationId);
+  const isSandbox = process.env.MVOLA_ENV !== "production";
+  if (localRecord && (localRecord.status !== "pending" || isSandbox)) {
+    return NextResponse.json({
+      transactionStatus: localRecord.status,
+      status: localRecord.status,
+      serverCorrelationId: correlationId,
+      transactionReference: localRecord.mvolaReference ?? "",
+    });
+  }
+
   try {
     const token = await getToken();
     const statusResponse = await getTransactionStatus(correlationId, token);
@@ -42,10 +59,9 @@ export async function GET(
     // Side-effect: reconcile local wallet state on the first terminal hit.
     // A missing local record (unknown correlationId) is tolerated — we just
     // skip the reconciliation and still return MVola's body to the caller.
-    const record = getTransactionByCorrelationId(correlationId);
-    if (record) {
+    if (localRecord) {
       reconcileTransaction(
-        record,
+        localRecord,
         statusResponse.transactionStatus,
         statusResponse.transactionReference
       );

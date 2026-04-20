@@ -49,6 +49,18 @@ function buildCtx(
   return { params: Promise.resolve({ correlationId }) };
 }
 
+const originalEnv = process.env.MVOLA_ENV;
+
+beforeAll(() => {
+  // These tests exercise the real MVola proxy behaviour; the route's
+  // sandbox short-circuit is skipped when MVOLA_ENV === "production".
+  process.env.MVOLA_ENV = "production";
+});
+
+afterAll(() => {
+  process.env.MVOLA_ENV = originalEnv;
+});
+
 beforeEach(() => {
   resetTransactions();
   resetWallets();

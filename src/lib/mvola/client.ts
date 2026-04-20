@@ -56,7 +56,12 @@ function getBaseUrl(): string {
  * @param token - A valid MVola Bearer access token (from auth.ts)
  * @returns A record of all required headers
  */
-function buildHeaders(token: string, callbackUrl?: string): Record<string, string> {
+function buildHeaders(
+  token: string,
+  callbackUrl?: string,
+  userAccountMsisdn?: string
+): Record<string, string> {
+  const accountMsisdn = userAccountMsisdn ?? process.env.MVOLA_MERCHANT_MSISDN;
   const headers: Record<string, string> = {
     Accept: "*/*",
     "Content-Type": "application/json",
@@ -64,7 +69,7 @@ function buildHeaders(token: string, callbackUrl?: string): Record<string, strin
     Version: "1.0",
     "X-CorrelationID": crypto.randomUUID(),
     UserLanguage: "FR",
-    UserAccountIdentifier: `msisdn;${process.env.MVOLA_MERCHANT_MSISDN}`,
+    UserAccountIdentifier: `msisdn;${accountMsisdn}`,
     partnerName: process.env.MVOLA_PARTNER_NAME!,
     "Cache-Control": "no-cache",
   };
@@ -154,14 +159,15 @@ export async function initiateDeposit(
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}/mvola/mm/transactions/type/merchantpay/1.0.0/`;
   const merchantMsisdn = process.env.MVOLA_MERCHANT_MSISDN!;
-  const partnerName = process.env.MVOLA_PARTNER_NAME ?? "";
+  const partnerName = process.env.MVOLA_PARTNER_NAME!;
   const amount = String(params.amount);
 
   const body = {
     amount,
     currency: params.currency ?? "Ar",
     descriptionText: params.description ?? "Game deposit",
-    requestingOrganisationTransactionReference: `game-deposit-${crypto.randomUUID()}`,
+    requestingOrganisationTransactionReference: crypto.randomUUID(),
+    originalTransactionReference: crypto.randomUUID(),
     requestDate: new Date().toISOString(),
     debitParty: [{ key: "msisdn", value: params.msisdn }],
     creditParty: [{ key: "msisdn", value: merchantMsisdn }],

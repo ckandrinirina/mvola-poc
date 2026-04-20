@@ -18,7 +18,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "@/lib/mvola/auth";
 import { initiateDeposit } from "@/lib/mvola/client";
-import { createTransaction } from "@/lib/store/transactions";
+import { createTransaction, getTransactionByCorrelationId } from "@/lib/store/transactions";
+import { reconcileTransaction } from "@/lib/mvola/reconcile";
+
+const SANDBOX_AUTO_COMPLETE_MS = 3000;
 
 /**
  * Initiates a deposit by validating the request, acquiring a token,
@@ -73,6 +76,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       correlationId: mvolaResponse.serverCorrelationId,
       walletSettled: false,
     });
+
+    // Sandbox demo: MVola sandbox never completes deposits (no customer
+    // authorization UI). Auto-fire the callback path after a short delay so
+    // the demo flows end-to-end. Production is untouched.
+    if (process.env.MVOLA_ENV !== "production") {
+      const timer = setTimeout(() => {
+        const latest = getTransactionByCorrelationId(record.correlationId);
+        if (latest && latest.status === "pending") {
+          reconcileTransaction(latest, "completed", `MVL-SANDBOX-${record.localTxId.slice(0, 8)}`);
+        }
+      }, SANDBOX_AUTO_COMPLETE_MS);
+      timer.unref?.();
+    }
 
     return NextResponse.json(
       {

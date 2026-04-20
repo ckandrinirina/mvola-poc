@@ -54,6 +54,18 @@ function seedWallet(msisdn: string, balance: number): void {
 }
 
 describe("POST /api/mvola/withdraw", () => {
+  const originalEnv = process.env.MVOLA_ENV;
+
+  beforeAll(() => {
+    // These tests exercise the real MVola integration path; the route's
+    // sandbox shim is skipped when MVOLA_ENV === "production".
+    process.env.MVOLA_ENV = "production";
+  });
+
+  afterAll(() => {
+    process.env.MVOLA_ENV = originalEnv;
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
     resetWallets();
