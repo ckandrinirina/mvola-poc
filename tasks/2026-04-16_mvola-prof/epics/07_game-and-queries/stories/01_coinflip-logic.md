@@ -2,7 +2,7 @@
 
 > **Epic:** 07 — Game & Wallet Queries
 > **Size:** S
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,14 +10,14 @@ Create `src/lib/game/coinflip.ts` — a single pure function `playCoinFlip(bet, 
 
 ## Acceptance Criteria
 
-- [ ] `playCoinFlip(bet: number, choice: GameChoice, rng?: () => GameChoice): CoinFlipOutcome` exported
-- [ ] Throws `Error` if `bet` is not a positive integer
-- [ ] `outcome` equals `rng()` when provided; default RNG uses `crypto.getRandomValues(new Uint8Array(1))[0] < 128 ? "heads" : "tails"`
-- [ ] `result = outcome === choice ? "win" : "loss"`
-- [ ] `delta = result === "win" ? bet : -bet`
-- [ ] Return type exactly matches `CoinFlipOutcome` from `src/lib/mvola/types.ts`
-- [ ] Function has **no side effects** — no store access, no I/O, no logging
-- [ ] Unit tests: forced heads/win, forced heads/loss, forced tails/win, forced tails/loss, bet=0 throws, bet=-5 throws, bet=1.5 throws, default RNG produces both outcomes over many calls
+- [x] `playCoinFlip(bet: number, choice: GameChoice, rng?: () => GameChoice): CoinFlipOutcome` exported
+- [x] Throws `Error` if `bet` is not a positive integer
+- [x] `outcome` equals `rng()` when provided; default RNG uses `crypto.getRandomValues(new Uint8Array(1))[0] < 128 ? "heads" : "tails"`
+- [x] `result = outcome === choice ? "win" : "loss"`
+- [x] `delta = result === "win" ? bet : -bet`
+- [x] Return type exactly matches `CoinFlipOutcome` from `src/lib/mvola/types.ts`
+- [x] Function has **no side effects** — no store access, no I/O, no logging
+- [x] Unit tests: forced heads/win, forced heads/loss, forced tails/win, forced tails/loss, bet=0 throws, bet=-5 throws, bet=1.5 throws, default RNG produces both outcomes over many calls
 
 ## Technical Notes
 
