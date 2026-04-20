@@ -10,6 +10,8 @@
 | HTTP client | Native `fetch` | — | Call MVola API from server routes |
 | Styling | Tailwind CSS | 3+ | Utility-first CSS for demo UI |
 | Package manager | npm | 10+ | Dependency management |
+| State (in-memory) | Native `Map` | — | Wallet, transaction, and game-session stores in `src/lib/store/` — module-level singletons; no new runtime dependency |
+| Game RNG | `crypto.getRandomValues` | Node 18+ built-in | Coin-flip outcome in `src/lib/game/coinflip.ts` — cryptographically-seeded, no external RNG library |
 
 ## Frontend
 
@@ -49,6 +51,19 @@
 ### Serialization
 - **Format:** JSON (`Content-Type: application/json`) for transaction calls
 - **Format:** `application/x-www-form-urlencoded` for token requests
+
+## State & Simulation
+
+### In-Memory Store
+- **Implementation:** Native `Map` objects at module scope in `src/lib/store/{wallets,transactions,games}.ts`
+- **Lifetime:** Single server process — wiped on restart (matches existing OAuth token-cache behaviour in `src/lib/mvola/auth.ts`)
+- **Concurrency model:** Single-process assumption, no locking; Node's single-threaded event loop is sufficient for PoC
+- **Rationale:** Zero new runtime dependencies, mirrors an existing pattern in the codebase, sufficient for a demo and straightforward to migrate to SQLite/Postgres later
+
+### Game Simulation
+- **Location:** `src/lib/game/coinflip.ts` — pure function, no I/O
+- **Randomness:** Derived from a single uniform byte produced by `crypto.getRandomValues`
+- **Testability:** Accepts an optional random source injection point so tests can force deterministic outcomes
 
 ## Development Tools
 

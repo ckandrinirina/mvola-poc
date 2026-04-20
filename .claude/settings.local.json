@@ -14,7 +14,9 @@
       "Bash(npx jest *)",
       "Bash(npx tsc *)",
       "Bash(npm test *)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git *)",
+      "Bash(npm run *)"
     ]
   }
 }

@@ -82,6 +82,18 @@ All variables are accessed only in server-side code (`src/lib/mvola/`). They are
 
 ---
 
+## No New Environment Variables Required
+
+The wallet / deposit / coin-flip / cash-out feature introduces **no new environment variables**. It relies entirely on:
+
+- The existing MVola credentials (`MVOLA_CONSUMER_KEY`, `MVOLA_CONSUMER_SECRET`, `MVOLA_MERCHANT_MSISDN`, `MVOLA_PARTNER_NAME`, `MVOLA_COMPANY_NAME`, `MVOLA_ENV`, `MVOLA_CALLBACK_URL`)
+- In-memory module-level `Map` stores in `src/lib/store/` — no connection string, no database, no secret
+- Built-in `crypto.getRandomValues` for the coin-flip RNG — no RNG provider or key to configure
+
+If persistence is added later (SQLite, Postgres, or a file-backed store), new env vars would be introduced then — not by this feature.
+
+---
+
 ## Webhook Callback URL — Local Development
 
 MVola must be able to reach your `PUT /api/mvola/callback` endpoint.

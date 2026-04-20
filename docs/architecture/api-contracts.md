@@ -20,42 +20,92 @@ Acquire a fresh OAuth token (for debugging/testing only).
 
 ---
 
-### POST `/api/mvola/withdraw`
+### POST `/api/mvola/deposit`
 
-Initiate a withdrawal payout from the merchant account to a player.
+Initiate a **deposit** from a player's MVola account into the in-game wallet. Internally calls the same MVola Merchant Pay endpoint as withdraw, but with `debitParty` = player MSISDN and `creditParty` = merchant MSISDN. The in-game wallet is credited **only when MVola confirms** the transaction (via status poll or webhook), never at request time.
 
 **Request:**
 ```json
 {
-  "amount": "5000",
-  "playerMsisdn": "0343500003",
-  "description": "Game withdrawal"
+  "msisdn": "0343500003",
+  "amount": "5000"
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
+| msisdn | string | Yes | Player MVola phone number (debited by MVola) |
 | amount | string | Yes | Amount in Ariary (e.g. `"5000"`) |
-| playerMsisdn | string | Yes | Player's MVola phone number |
-| description | string | No | Transaction description text |
 
 **Response (200):**
 ```json
 {
   "correlationId": "550e8400-e29b-41d4-a716-446655440000",
+  "localTxId": "tx_01HW...",
   "status": "pending"
 }
 ```
 
 **Response (400):**
 ```json
-{ "error": "amount and playerMsisdn are required" }
+{ "error": "msisdn and amount are required" }
 ```
 
 **Response (502):**
 ```json
 { "error": "MVola API error", "details": "..." }
 ```
+
+> The wallet is NOT credited by this endpoint. Poll `GET /api/mvola/status/{correlationId}` until `completed`; the status route (or the webhook) will apply the wallet credit.
+
+---
+
+### POST `/api/mvola/withdraw`
+
+Initiate a **cash-out** (withdrawal payout) from the merchant account to a player's MVola number. The in-game wallet is debited (reserved) **at request time** and refunded if MVola rejects the request or reports `failed`.
+
+**Request:**
+```json
+{
+  "msisdn": "0343500003",
+  "amount": "5000",
+  "description": "Game cash-out"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| msisdn | string | Yes | Player's MVola phone number (credited by MVola) |
+| amount | string | Yes | Amount in Ariary (e.g. `"5000"`) — must be ≤ wallet balance |
+| description | string | No | Transaction description text |
+
+> `playerMsisdn` is accepted as a legacy alias for `msisdn` when the wallet integration is first rolled out; prefer `msisdn`.
+
+**Response (200):**
+```json
+{
+  "correlationId": "550e8400-e29b-41d4-a716-446655440000",
+  "localTxId": "tx_01HW...",
+  "status": "pending"
+}
+```
+
+**Response (400):**
+```json
+{ "error": "msisdn and amount are required" }
+```
+
+**Response (409):**
+```json
+{ "error": "Insufficient funds", "balance": 1000, "requested": 5000 }
+```
+
+**Response (502):**
+```json
+{ "error": "MVola API error", "details": "..." }
+```
+
+> On success, the wallet is **immediately debited by `amount`** (reserve). If the MVola call itself fails synchronously, or the transaction later resolves to `failed`, the wallet is refunded automatically.
 
 ---
 
@@ -214,3 +264,118 @@ grant_type=client_credentials&scope=EXT_INT_MVOLA_SCOPE
 |--------|------|
 | `0343500003` | Test account A (use as player in sandbox) |
 | `0343500004` | Test account B |
+
+---
+
+## Internal Wallet & Game API
+
+These routes read and mutate the in-memory wallet / transaction / game state. They do **not** call MVola directly. They exist only on this server.
+
+### GET `/api/wallet/[msisdn]/balance`
+
+Return the current in-game wallet balance for a player.
+
+**Path parameter:** `msisdn` — the player's MVola phone number (the wallet key).
+
+**Response (200):**
+```json
+{
+  "msisdn": "0343500003",
+  "balance": 5000,
+  "updatedAt": 1745150400000
+}
+```
+
+> Returns `{ balance: 0 }` for an MSISDN that has never been seen — a wallet is created lazily on first credit/debit.
+
+---
+
+### GET `/api/wallet/[msisdn]/history`
+
+Return a chronologically-sorted merged history of all transactions and game rounds for a player.
+
+**Path parameter:** `msisdn` — the player's MVola phone number.
+
+**Response (200):**
+```json
+{
+  "msisdn": "0343500003",
+  "entries": [
+    {
+      "kind": "transaction",
+      "localTxId": "tx_01HW...",
+      "correlationId": "550e8400-e29b-41d4-a716-446655440000",
+      "direction": "deposit",
+      "amount": 5000,
+      "status": "completed",
+      "mvolaReference": "MVL-2026-04-20-001",
+      "createdAt": 1745150200000,
+      "updatedAt": 1745150260000
+    },
+    {
+      "kind": "game",
+      "sessionId": "gm_01HW...",
+      "bet": 1000,
+      "choice": "heads",
+      "outcome": "tails",
+      "result": "loss",
+      "delta": -1000,
+      "balanceAfter": 4000,
+      "playedAt": 1745150300000
+    }
+  ]
+}
+```
+
+Entries are sorted most-recent-first.
+
+---
+
+### POST `/api/game/coinflip`
+
+Play one round of coin-flip. Atomically validates balance, debits the bet, computes the outcome, and credits winnings on a win.
+
+**Request:**
+```json
+{
+  "msisdn": "0343500003",
+  "bet": 1000,
+  "choice": "heads"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| msisdn | string | Yes | Player MSISDN |
+| bet | integer | Yes | Bet amount in Ariary, must be > 0 and ≤ current wallet balance |
+| choice | `"heads"` \| `"tails"` | Yes | Player's coin-flip pick |
+
+**Response (200):**
+```json
+{
+  "sessionId": "gm_01HW...",
+  "outcome": "tails",
+  "result": "loss",
+  "delta": -1000,
+  "balanceAfter": 4000
+}
+```
+
+**Response (400):**
+```json
+{ "error": "Invalid request", "details": "bet must be a positive integer" }
+```
+
+**Response (409):**
+```json
+{ "error": "Insufficient funds", "balance": 500, "requested": 1000 }
+```
+
+### Payout table
+
+| Scenario | Delta | Balance change |
+|----------|-------|----------------|
+| `outcome === choice` (win) | `+bet` | `−bet + 2·bet = +bet` net |
+| `outcome !== choice` (loss) | `−bet` | `−bet` net |
+
+No house edge in the PoC; odds are exactly 50/50.
