@@ -2,7 +2,7 @@
 
 > **Epic:** 06 — Wallet-Aware MVola Flows
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,15 +10,15 @@ Create `src/app/api/mvola/deposit/route.ts` — the route the browser calls to s
 
 ## Acceptance Criteria
 
-- [ ] `POST /api/mvola/deposit` accepts `{ msisdn: string, amount: string | number }` JSON body
-- [ ] Returns 400 `{ error: "msisdn and amount are required" }` if either field is missing
-- [ ] Returns 400 `{ error: "amount must be a positive integer" }` if amount can't be coerced to a positive integer
-- [ ] Calls `getToken()` then `initiateDeposit({ msisdn, amount: <integer> }, token)`
-- [ ] On success, calls `createTransaction({ msisdn, direction: "deposit", amount, correlationId: serverCorrelationId, walletSettled: false })`
-- [ ] Returns 200 `{ correlationId, localTxId, status: "pending" }`
-- [ ] Returns 502 `{ error: "MVola API error", details: <string> }` on MVola throw — no transaction record is created
-- [ ] Wallet balance for the MSISDN is unchanged by a successful 200 response
-- [ ] Route tests cover: 400 bad body, 200 happy path with store assertions, 502 on MVola error, wallet unchanged
+- [x] `POST /api/mvola/deposit` accepts `{ msisdn: string, amount: string | number }` JSON body
+- [x] Returns 400 `{ error: "msisdn and amount are required" }` if either field is missing
+- [x] Returns 400 `{ error: "amount must be a positive integer" }` if amount can't be coerced to a positive integer
+- [x] Calls `getToken()` then `initiateDeposit({ msisdn, amount: <integer> }, token)`
+- [x] On success, calls `createTransaction({ msisdn, direction: "deposit", amount, correlationId: serverCorrelationId, walletSettled: false })`
+- [x] Returns 200 `{ correlationId, localTxId, status: "pending" }`
+- [x] Returns 502 `{ error: "MVola API error", details: <string> }` on MVola throw — no transaction record is created
+- [x] Wallet balance for the MSISDN is unchanged by a successful 200 response
+- [x] Route tests cover: 400 bad body, 200 happy path with store assertions, 502 on MVola error, wallet unchanged
 
 ## Technical Notes
 
