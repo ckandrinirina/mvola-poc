@@ -2,7 +2,7 @@
 
 > **Epic:** 05 — State Store Layer
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,22 +10,22 @@ Create the transaction store — an in-memory log of every deposit and cash-out 
 
 ## Acceptance Criteria
 
-- [ ] `createTransaction(input): TransactionRecord` where `input = { msisdn, direction, amount, correlationId, walletSettled }`:
-  - [ ] Generates `localTxId` via `crypto.randomUUID()`
-  - [ ] Sets `status = "pending"`, `createdAt = updatedAt = Date.now()`
-  - [ ] Inserts into both the primary map (by `localTxId`) and the secondary `correlationId` index
-  - [ ] Throws `Error` if the `correlationId` already exists in the secondary index
-  - [ ] Throws `Error` if `amount` is not a positive integer
-- [ ] `getTransactionByCorrelationId(correlationId: string): TransactionRecord | undefined` uses the secondary index
-- [ ] `getTransactionById(localTxId: string): TransactionRecord | undefined` uses the primary map
-- [ ] `updateTransactionStatus(localTxId, status, patch?: { mvolaReference?, walletSettled? }): TransactionRecord`:
-  - [ ] Throws if the record doesn't exist
-  - [ ] Updates `status`, bumps `updatedAt`
-  - [ ] Optionally sets `mvolaReference` and/or `walletSettled` from `patch`
-- [ ] `listTransactionsByMsisdn(msisdn: string): TransactionRecord[]` returns records sorted by `createdAt` descending
-- [ ] `resetAll(): void` clears both primary and secondary maps
-- [ ] The underlying maps are module-private
-- [ ] Unit tests cover: create + lookup by both keys, duplicate correlationId rejection, status update + mvolaReference / walletSettled patches, list order, multi-msisdn isolation, non-integer amount rejection
+- [x] `createTransaction(input): TransactionRecord` where `input = { msisdn, direction, amount, correlationId, walletSettled }`:
+  - [x] Generates `localTxId` via `crypto.randomUUID()`
+  - [x] Sets `status = "pending"`, `createdAt = updatedAt = Date.now()`
+  - [x] Inserts into both the primary map (by `localTxId`) and the secondary `correlationId` index
+  - [x] Throws `Error` if the `correlationId` already exists in the secondary index
+  - [x] Throws `Error` if `amount` is not a positive integer
+- [x] `getTransactionByCorrelationId(correlationId: string): TransactionRecord | undefined` uses the secondary index
+- [x] `getTransactionById(localTxId: string): TransactionRecord | undefined` uses the primary map
+- [x] `updateTransactionStatus(localTxId, status, patch?: { mvolaReference?, walletSettled? }): TransactionRecord`:
+  - [x] Throws if the record doesn't exist
+  - [x] Updates `status`, bumps `updatedAt`
+  - [x] Optionally sets `mvolaReference` and/or `walletSettled` from `patch`
+- [x] `listTransactionsByMsisdn(msisdn: string): TransactionRecord[]` returns records sorted by `createdAt` descending
+- [x] `resetAll(): void` clears both primary and secondary maps
+- [x] The underlying maps are module-private
+- [x] Unit tests cover: create + lookup by both keys, duplicate correlationId rejection, status update + mvolaReference / walletSettled patches, list order, multi-msisdn isolation, non-integer amount rejection
 
 ## Technical Notes
 
