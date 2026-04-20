@@ -2,7 +2,7 @@
 
 > **Epic:** 05 — State Store Layer
 > **Size:** S
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,16 +10,16 @@ Create the game session store — an append-only in-memory log of every coin-fli
 
 ## Acceptance Criteria
 
-- [ ] `recordGameSession(input): GameSession` where `input = { msisdn, bet, choice, outcome, result, delta, balanceAfter }`:
-  - [ ] Generates `sessionId` via `crypto.randomUUID()`
-  - [ ] Sets `playedAt = Date.now()`
-  - [ ] Inserts into the primary map
-  - [ ] Throws `Error` if `bet` or `balanceAfter` is not a non-negative integer (bet > 0; balanceAfter >= 0)
-- [ ] `listGameSessionsByMsisdn(msisdn: string): GameSession[]` returns sessions sorted by `playedAt` descending
-- [ ] `resetAll(): void` clears the map
-- [ ] The underlying map is module-private
-- [ ] No mutation API beyond `recordGameSession` and `resetAll`
-- [ ] Unit tests cover: record, list order, multi-msisdn isolation, input validation
+- [x] `recordGameSession(input): GameSession` where `input = { msisdn, bet, choice, outcome, result, delta, balanceAfter }`:
+  - [x] Generates `sessionId` via `crypto.randomUUID()`
+  - [x] Sets `playedAt = Date.now()`
+  - [x] Inserts into the primary map
+  - [x] Throws `Error` if `bet` or `balanceAfter` is not a non-negative integer (bet > 0; balanceAfter >= 0)
+- [x] `listGameSessionsByMsisdn(msisdn: string): GameSession[]` returns sessions sorted by `playedAt` descending
+- [x] `resetAll(): void` clears the map
+- [x] The underlying map is module-private
+- [x] No mutation API beyond `recordGameSession` and `resetAll`
+- [x] Unit tests cover: record, list order, multi-msisdn isolation, input validation
 
 ## Technical Notes
 
