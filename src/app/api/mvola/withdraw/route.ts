@@ -1,71 +1,159 @@
 /**
  * MVola Withdraw Endpoint — POST /api/mvola/withdraw
  *
- * Primary payout initiation route. Validates the incoming request body,
- * acquires an OAuth token, calls initiateWithdrawal() from client.ts,
- * and returns the correlationId for the caller to poll.
+ * Wallet-aware cash-out route. The in-game wallet is the source of truth
+ * for available funds, so the route:
  *
- * Does NOT call the MVola API directly — delegates entirely to:
- * - getToken()          from auth.ts   (token acquisition + caching)
- * - initiateWithdrawal() from client.ts (HTTP call to MVola merchant pay)
+ *   1. Validates the request body (msisdn + positive-integer amount).
+ *      `playerMsisdn` is accepted as a legacy alias for `msisdn`.
+ *   2. Reserves the funds by debiting the wallet BEFORE any async work.
+ *      If the wallet has insufficient balance, returns 409 immediately.
+ *   3. Acquires an OAuth token and calls `initiateWithdrawal()`. If either
+ *      step throws synchronously, the wallet is refunded and a 502 is
+ *      returned — no transaction record is created.
+ *   4. On success, records a `TransactionRecord` with `walletSettled=true`
+ *      and returns `{ correlationId, localTxId, status: "pending" }`.
+ *
+ * The route does NOT call MVola's HTTP endpoints directly — it delegates
+ * entirely to `getToken()` (auth.ts) and `initiateWithdrawal()` (client.ts).
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "@/lib/mvola/auth";
 import { initiateWithdrawal } from "@/lib/mvola/client";
+import { createTransaction } from "@/lib/store/transactions";
+import { creditWallet, debitWallet } from "@/lib/store/wallets";
+import { InsufficientFundsError } from "@/lib/mvola/types";
+
+const DEFAULT_DESCRIPTION = "Game withdrawal";
 
 /**
- * Initiates a withdrawal by validating the request, acquiring a token,
- * and delegating to initiateWithdrawal().
- *
- * @param req - The incoming Next.js request containing the JSON body
- * @returns 200 `{ correlationId, status: "pending" }` on success.
- * @returns 400 `{ error }` if required fields are missing.
- * @returns 502 `{ error: "MVola API error", details }` on MVola failure.
+ * Parsed, validated request body. Only produced after validation succeeds.
  */
-export async function POST(req: NextRequest): Promise<NextResponse> {
-  // Parse and validate the request body
-  let body: Record<string, unknown> | null = null;
-  try {
-    body = await req.json();
-  } catch {
-    // Malformed JSON — treat as missing required fields
-  }
+interface WithdrawInput {
+  msisdn: string;
+  amount: number;
+  description: string;
+}
 
-  const amount = body?.amount as string | undefined;
-  const playerMsisdn = body?.playerMsisdn as string | undefined;
-  const description = (body?.description as string | undefined) ?? "Game withdrawal";
+/**
+ * Parses the raw body into a validated `WithdrawInput`, or returns a
+ * `NextResponse` describing the 400 validation failure.
+ *
+ * Accepts `playerMsisdn` as a legacy alias for `msisdn`.
+ * Accepts `amount` as either a number or a numeric string; rejects
+ * anything that isn't a positive integer.
+ */
+function parseBody(
+  raw: Record<string, unknown> | null,
+): WithdrawInput | NextResponse {
+  const msisdn =
+    (raw?.msisdn as string | undefined) ??
+    (raw?.playerMsisdn as string | undefined);
+  const rawAmount = raw?.amount as string | number | undefined;
 
-  if (!amount || !playerMsisdn) {
+  if (!msisdn || rawAmount === undefined || rawAmount === null || rawAmount === "") {
     return NextResponse.json(
-      { error: "amount and playerMsisdn are required" },
-      { status: 400 }
+      { error: "msisdn and amount are required" },
+      { status: 400 },
     );
   }
 
-  // Acquire token then call MVola — both failures surface as 502
+  const parsedAmount =
+    typeof rawAmount === "number" ? rawAmount : Number(rawAmount);
+
+  if (!Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+    return NextResponse.json(
+      { error: "amount must be a positive integer" },
+      { status: 400 },
+    );
+  }
+
+  const description =
+    (raw?.description as string | undefined) ?? DEFAULT_DESCRIPTION;
+
+  return { msisdn, amount: parsedAmount, description };
+}
+
+/**
+ * Reserves `amount` from the wallet via `debitWallet`. On insufficient
+ * funds, returns a 409 response. Any other error propagates.
+ */
+function reserveFunds(msisdn: string, amount: number): NextResponse | null {
+  try {
+    debitWallet(msisdn, amount);
+    return null;
+  } catch (err) {
+    if (err instanceof InsufficientFundsError) {
+      return NextResponse.json(
+        {
+          error: "Insufficient funds",
+          balance: err.balance,
+          requested: err.requested,
+        },
+        { status: 409 },
+      );
+    }
+    throw err;
+  }
+}
+
+/**
+ * Handles a withdraw request end-to-end. See module docstring for the flow.
+ */
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  // --- 1. Parse + validate body ---
+  let rawBody: Record<string, unknown> | null = null;
+  try {
+    rawBody = await req.json();
+  } catch {
+    // Malformed JSON falls through as missing fields.
+  }
+
+  const parsed = parseBody(rawBody);
+  if (parsed instanceof NextResponse) {
+    return parsed;
+  }
+  const { msisdn, amount, description } = parsed;
+
+  // --- 2. Reserve funds synchronously (before any await) ---
+  const reserveFailure = reserveFunds(msisdn, amount);
+  if (reserveFailure) return reserveFailure;
+
+  // --- 3. Call MVola; refund the wallet on any sync error ---
+  let mvolaResponse;
   try {
     const token = await getToken();
-
-    const result = await initiateWithdrawal(
+    mvolaResponse = await initiateWithdrawal(
       {
         amount: String(amount),
         currency: "Ar",
         descriptionText: description,
-        playerMsisdn,
+        playerMsisdn: msisdn,
       },
-      token
+      token,
     );
-
-    return NextResponse.json({
-      correlationId: result.serverCorrelationId,
-      status: "pending",
-    });
   } catch (err) {
+    creditWallet(msisdn, amount); // refund
     const details = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
       { error: "MVola API error", details },
-      { status: 502 }
+      { status: 502 },
     );
   }
+
+  // --- 4. Record the transaction; wallet has already been settled ---
+  const record = createTransaction({
+    msisdn,
+    direction: "withdraw",
+    amount,
+    correlationId: mvolaResponse.serverCorrelationId,
+    walletSettled: true,
+  });
+
+  return NextResponse.json({
+    correlationId: record.correlationId,
+    localTxId: record.localTxId,
+    status: "pending",
+  });
 }
