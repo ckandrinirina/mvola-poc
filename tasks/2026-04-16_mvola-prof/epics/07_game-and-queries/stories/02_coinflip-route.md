@@ -2,7 +2,7 @@
 
 > **Epic:** 07 — Game & Wallet Queries
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,19 +10,19 @@ Create `src/app/api/game/coinflip/route.ts` — the route the browser calls to p
 
 ## Acceptance Criteria
 
-- [ ] Accepts `{ msisdn: string, bet: number, choice: "heads" | "tails" }` JSON body
-- [ ] Returns 400 `{ error: "Invalid request", details: <string> }` when:
-  - [ ] `msisdn` is missing or empty
-  - [ ] `bet` is not a positive integer
-  - [ ] `choice` is not `"heads"` or `"tails"`
-- [ ] Returns 409 `{ error: "Insufficient funds", balance, requested }` when wallet < bet
-- [ ] Debits the bet via `debitWallet(msisdn, bet)` **before** calling `playCoinFlip` (synchronous block — no `await`)
-- [ ] On win (`result === "win"`): calls `creditWallet(msisdn, 2 * bet)` — net wallet delta is `+bet`
-- [ ] On loss: wallet stays at `balance − bet`
-- [ ] Calls `recordGameSession({ msisdn, bet, choice, outcome, result, delta, balanceAfter })` where `balanceAfter = getWallet(msisdn).balance`
-- [ ] Returns 200 `{ sessionId, outcome, result, delta, balanceAfter }` on success
-- [ ] Route tests cover: 400 each validation path, 409 insufficient funds, 200 win path (mocked RNG), 200 loss path (mocked RNG), wallet balance is correct after each
-- [ ] No MVola API is called
+- [x] Accepts `{ msisdn: string, bet: number, choice: "heads" | "tails" }` JSON body
+- [x] Returns 400 `{ error: "Invalid request", details: <string> }` when:
+  - [x] `msisdn` is missing or empty
+  - [x] `bet` is not a positive integer
+  - [x] `choice` is not `"heads"` or `"tails"`
+- [x] Returns 409 `{ error: "Insufficient funds", balance, requested }` when wallet < bet
+- [x] Debits the bet via `debitWallet(msisdn, bet)` **before** calling `playCoinFlip` (synchronous block — no `await`)
+- [x] On win (`result === "win"`): calls `creditWallet(msisdn, 2 * bet)` — net wallet delta is `+bet`
+- [x] On loss: wallet stays at `balance − bet`
+- [x] Calls `recordGameSession({ msisdn, bet, choice, outcome, result, delta, balanceAfter })` where `balanceAfter = getWallet(msisdn).balance`
+- [x] Returns 200 `{ sessionId, outcome, result, delta, balanceAfter }` on success
+- [x] Route tests cover: 400 each validation path, 409 insufficient funds, 200 win path (mocked RNG), 200 loss path (mocked RNG), wallet balance is correct after each
+- [x] No MVola API is called
 
 ## Technical Notes
 
