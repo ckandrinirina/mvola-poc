@@ -2,7 +2,7 @@
 
 > **Epic:** 08 — Tabbed Demo UI
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,15 +10,15 @@ Create `src/components/TransactionHistory.tsx` — the history tab body. Fetches
 
 ## Acceptance Criteria
 
-- [ ] Component is a React client component (`"use client"`)
-- [ ] Reads `msisdn` and `balance` from `useMsisdnContext()`
-- [ ] On mount and whenever `balance` changes, GETs `/api/wallet/:msisdn/history`
-- [ ] Renders a list of entries in the order returned by the API (newest first)
-- [ ] Transaction entries show: direction (deposit ↓ / withdraw ↑), amount with sign, status chip (pending / completed / failed), MVola reference when present, relative time
-- [ ] Game entries show: bet, choice, outcome (heads / tails), result banner (win / loss colored), delta with sign, post-balance, relative time
-- [ ] Empty state: "No activity yet"
-- [ ] Use `entry.localTxId` or `entry.sessionId` as the React `key`
-- [ ] Component tests cover: fetches on mount, mixed history renders in correct order, empty state, status chip colors
+- [x] Component is a React client component (`"use client"`)
+- [x] Reads `msisdn` and `balance` from `useMsisdnContext()`
+- [x] On mount and whenever `balance` changes, GETs `/api/wallet/:msisdn/history`
+- [x] Renders a list of entries in the order returned by the API (newest first)
+- [x] Transaction entries show: direction (deposit ↓ / withdraw ↑), amount with sign, status chip (pending / completed / failed), MVola reference when present, relative time
+- [x] Game entries show: bet, choice, outcome (heads / tails), result banner (win / loss colored), delta with sign, post-balance, relative time
+- [x] Empty state: "No activity yet"
+- [x] Use `entry.localTxId` or `entry.sessionId` as the React `key`
+- [x] Component tests cover: fetches on mount, mixed history renders in correct order, empty state, status chip colors
 
 ## Technical Notes
 
