@@ -76,40 +76,7 @@ export interface CallbackPayload {
   creditParty: MVolaParty[];
 }
 
-// --- Domain types (new) ---
-
-/**
- * Direction of a wallet transaction.
- */
-export type TransactionDirection = "deposit" | "withdraw";
-
-/**
- * Current state of a wallet.
- * All monetary amounts are integer Ariary.
- */
-export interface WalletState {
-  msisdn: string;
-  balance: number; // integer Ariary, always >= 0
-  createdAt: number;
-  updatedAt: number;
-}
-
-/**
- * Immutable record of a single wallet transaction.
- * All monetary amounts are integer Ariary.
- */
-export interface TransactionRecord {
-  localTxId: string;
-  correlationId: string;
-  msisdn: string;
-  direction: TransactionDirection;
-  amount: number;
-  status: TransactionStatus;
-  walletSettled: boolean;
-  mvolaReference?: string;
-  createdAt: number;
-  updatedAt: number;
-}
+// --- Domain types ---
 
 /**
  * Possible choices for the coin-flip game.
@@ -122,43 +89,10 @@ export type GameChoice = "heads" | "tails";
 export type GameResult = "win" | "loss";
 
 /**
- * Full record of a single coin-flip game session.
- * All monetary amounts are integer Ariary.
- */
-export interface GameSession {
-  sessionId: string;
-  msisdn: string;
-  bet: number;
-  choice: GameChoice;
-  outcome: GameChoice;
-  result: GameResult;
-  delta: number; // +bet on win, -bet on loss
-  balanceAfter: number;
-  playedAt: number;
-}
-
-/**
  * Result of a coin flip computation, before recording to the wallet.
  */
 export interface CoinFlipOutcome {
   outcome: GameChoice;
   result: GameResult;
   delta: number;
-}
-
-/**
- * Thrown when a wallet operation is attempted with insufficient balance.
- */
-export class InsufficientFundsError extends Error {
-  public readonly balance: number;
-  public readonly requested: number;
-
-  constructor(balance: number, requested: number) {
-    super(
-      `Insufficient funds: balance=${balance}, requested=${requested}`
-    );
-    this.name = "InsufficientFundsError";
-    this.balance = balance;
-    this.requested = requested;
-  }
 }
