@@ -2,7 +2,7 @@
 
 > **Epic:** 06 — Wallet-Aware MVola Flows
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,18 +10,18 @@ Refactor `src/app/api/mvola/callback/route.ts` so that, when MVola delivers an a
 
 ## Acceptance Criteria
 
-- [ ] Handler reads the PUT body and extracts `serverCorrelationId`, `transactionStatus`, `transactionReference`
-- [ ] Calls `getTransactionByCorrelationId(serverCorrelationId)`
-- [ ] If the record is found, invokes `reconcileTransaction(record, transactionStatus, transactionReference)` from `reconcile.ts`
-- [ ] If the record is NOT found, logs a warning (`"unknown correlationId"` + the payload) but still returns 200
-- [ ] Always returns `{ received: true }` with 200 — even on malformed payloads, parsing errors, or reconciliation throws (logged)
-- [ ] Route tests cover:
+- [x] Handler reads the PUT body and extracts `serverCorrelationId`, `transactionStatus`, `transactionReference`
+- [x] Calls `getTransactionByCorrelationId(serverCorrelationId)`
+- [x] If the record is found, invokes `reconcileTransaction(record, transactionStatus, transactionReference)` from `reconcile.ts`
+- [x] If the record is NOT found, logs a warning (`"unknown correlationId"` + the payload) but still returns 200
+- [x] Always returns `{ received: true }` with 200 — even on malformed payloads, parsing errors, or reconciliation throws (logged)
+- [x] Route tests cover:
   - known record + deposit + `completed` → wallet credited once, `walletSettled` flipped to `true`
   - duplicate callback (same correlationId twice) → no double-credit
   - known record + withdraw + `failed` → wallet refunded once
   - unknown correlationId → 200 + warning log
   - malformed JSON body → 200 + warning log
-- [ ] Existing callback tests updated to match the new contract (logging is now conditional; no secrets logged)
+- [x] Existing callback tests updated to match the new contract (logging is now conditional; no secrets logged)
 
 ## Technical Notes
 
