@@ -2,7 +2,7 @@
 
 > **Epic:** 06 — Wallet-Aware MVola Flows
 > **Size:** M
-> **Status:** TODO
+> **Status:** DONE
 
 ## Description
 
@@ -10,16 +10,16 @@ Extend `src/lib/mvola/client.ts` with a new `initiateDeposit(params, token)` fun
 
 ## Acceptance Criteria
 
-- [ ] `DepositParams` interface exported — symmetrical to `WithdrawalParams` (`msisdn`, `amount`, `description?`, `currency?`)
-- [ ] `initiateDeposit(params, token): Promise<TransactionResponse>` exported
-- [ ] Sends `POST` to the same MVola endpoint URL as `initiateWithdrawal`
-- [ ] `debitParty[0] = { key: "msisdn", value: params.msisdn }` (the player)
-- [ ] `creditParty[0] = { key: "msisdn", value: process.env.MVOLA_MERCHANT_MSISDN! }` (the merchant)
-- [ ] All other body fields (`requestingOrganisationTransactionReference`, `requestDate`, `metadata`) mirror the withdraw function
-- [ ] Uses the existing `buildHeaders()` helper (no duplication)
-- [ ] Uses the existing `throwOnError()` helper
-- [ ] Default `description = "Game deposit"`, default `currency = "Ar"`
-- [ ] Unit tests cover: correct URL, correct debit/credit party, correct metadata, error propagation via `throwOnError`
+- [x] `DepositParams` interface exported — symmetrical to `WithdrawalParams` (`msisdn`, `amount`, `description?`, `currency?`)
+- [x] `initiateDeposit(params, token): Promise<TransactionResponse>` exported
+- [x] Sends `POST` to the same MVola endpoint URL as `initiateWithdrawal`
+- [x] `debitParty[0] = { key: "msisdn", value: params.msisdn }` (the player)
+- [x] `creditParty[0] = { key: "msisdn", value: process.env.MVOLA_MERCHANT_MSISDN! }` (the merchant)
+- [x] All other body fields (`requestingOrganisationTransactionReference`, `requestDate`, `metadata`) mirror the withdraw function
+- [x] Uses the existing `buildHeaders()` helper (no duplication)
+- [x] Uses the existing `throwOnError()` helper
+- [x] Default `description = "Game deposit"`, default `currency = "Ar"`
+- [x] Unit tests cover: correct URL, correct debit/credit party, correct metadata, error propagation via `throwOnError`
 
 ## Technical Notes
 
