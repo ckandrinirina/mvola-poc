@@ -30,6 +30,9 @@ import type {
   GameResult,
   GameSession,
   CoinFlipOutcome,
+  TransactionStatusResponse,
+  TransactionDetailsResponse,
+  TransactionComparison,
 } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -229,5 +232,138 @@ describe("Existing MVola types remain accessible", () => {
       expires_in: 3600,
     };
     expect(token.token_type).toBe("Bearer");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TransactionStatusResponse — corrected shape — Story 09-02
+//
+// `status`/`objectReference` are MVola's verified field names; the legacy
+// `transactionStatus`/`transactionReference` pair is kept but optional.
+// ---------------------------------------------------------------------------
+
+describe("TransactionStatusResponse (corrected shape)", () => {
+  it("accepts the verified MVola shape without the legacy fields", () => {
+    const response: TransactionStatusResponse = {
+      status: "completed",
+      objectReference: "MVL-REF-1",
+      serverCorrelationId: "corr-1",
+    };
+    expect(response.status).toBe("completed");
+    expect(response.objectReference).toBe("MVL-REF-1");
+    expect(response.transactionStatus).toBeUndefined();
+    expect(response.transactionReference).toBeUndefined();
+  });
+
+  it("still accepts the legacy fields alongside the verified ones", () => {
+    const response: TransactionStatusResponse = {
+      status: "pending",
+      objectReference: "MVL-REF-2",
+      serverCorrelationId: "corr-2",
+      transactionStatus: "pending",
+      transactionReference: "MVL-REF-2",
+    };
+    expect(response.transactionStatus).toBe("pending");
+    expect(response.transactionReference).toBe("MVL-REF-2");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CallbackPayload — relaxed shape — Story 09-02
+//
+// The callback's real field spelling is unverified, so every status/reference
+// field is optional; only the transaction metadata stays required.
+// ---------------------------------------------------------------------------
+
+describe("CallbackPayload (relaxed shape)", () => {
+  it("accepts the legacy transactionStatus/transactionReference spelling alone", () => {
+    const payload: CallbackPayload = {
+      transactionStatus: "completed",
+      transactionReference: "MVL-REF-3",
+      serverCorrelationId: "corr-3",
+      amount: "5000",
+      currency: "Ar",
+      debitParty: [{ key: "msisdn", value: "0340000000" }],
+      creditParty: [{ key: "msisdn", value: "0340000001" }],
+    };
+    expect(payload.transactionStatus).toBe("completed");
+    expect(payload.status).toBeUndefined();
+  });
+
+  it("accepts the status/objectReference spelling alone", () => {
+    const payload: CallbackPayload = {
+      status: "failed",
+      objectReference: "MVL-REF-4",
+      serverCorrelationId: "corr-4",
+      amount: "5000",
+      currency: "Ar",
+      debitParty: [{ key: "msisdn", value: "0340000000" }],
+      creditParty: [{ key: "msisdn", value: "0340000001" }],
+    };
+    expect(payload.status).toBe("failed");
+    expect(payload.transactionStatus).toBeUndefined();
+  });
+
+  it("accepts a payload with neither status pair present", () => {
+    const payload: CallbackPayload = {
+      serverCorrelationId: "corr-5",
+      amount: "5000",
+      currency: "Ar",
+      debitParty: [{ key: "msisdn", value: "0340000000" }],
+      creditParty: [{ key: "msisdn", value: "0340000001" }],
+    };
+    expect(payload.status).toBeUndefined();
+    expect(payload.transactionStatus).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TransactionDetailsResponse / TransactionComparison — added — Story 09-02
+// ---------------------------------------------------------------------------
+
+describe("TransactionDetailsResponse interface", () => {
+  it("accepts the documented fields", () => {
+    const details: TransactionDetailsResponse = {
+      amount: "5000",
+      currency: "Ar",
+      transactionReference: "MVL-REF-5",
+      transactionStatus: "completed",
+      createDate: "2026-07-28T10:00:00.000Z",
+      debitParty: [{ key: "msisdn", value: "0340000000" }],
+      creditParty: [{ key: "msisdn", value: "0340000001" }],
+    };
+    expect(details.transactionReference).toBe("MVL-REF-5");
+  });
+
+  it("accepts an empty object (every named field is optional)", () => {
+    const details: TransactionDetailsResponse = {};
+    expect(details.amount).toBeUndefined();
+  });
+
+  it("preserves unnamed keys via the index signature", () => {
+    const details: TransactionDetailsResponse = { debitPartyId: "unforeseen-key" };
+    expect(details.debitPartyId).toBe("unforeseen-key");
+  });
+});
+
+describe("TransactionComparison interface", () => {
+  it("pairs the MVola record with the local record, no verdict field", () => {
+    const comparison: TransactionComparison = {
+      mvola: { transactionReference: "MVL-REF-6", transactionStatus: "completed" },
+      local: {
+        localTxId: "tx-010",
+        correlationId: "corr-010",
+        msisdn: "0340000000",
+        direction: "withdraw",
+        amount: 5000,
+        status: "completed",
+        walletSettled: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    };
+    expect(comparison.mvola.transactionReference).toBe("MVL-REF-6");
+    expect(comparison.local.status).toBe("completed");
+    expect(comparison).not.toHaveProperty("matches");
   });
 });
