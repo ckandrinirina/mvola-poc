@@ -210,7 +210,7 @@ describe("DepositForm", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/pending/i)).toBeInTheDocument();
+      expect(screen.getByText("Pending...")).toBeInTheDocument();
     });
   });
 
