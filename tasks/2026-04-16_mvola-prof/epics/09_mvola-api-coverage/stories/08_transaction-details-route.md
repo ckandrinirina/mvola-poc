@@ -2,7 +2,7 @@
 id: 09-08
 title: Details Route — `GET /api/mvola/transaction/[transactionReference]`
 epic: 09
-status: todo
+status: in-progress
 size: M
 blocked_by: [09-06, 09-07]
 files: [src/app/api/mvola/transaction/[transactionReference]/route.ts, src/app/api/mvola/transaction/[transactionReference]/__tests__/route.test.ts]
