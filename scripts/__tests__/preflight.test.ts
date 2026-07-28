@@ -40,6 +40,10 @@ function runPreflight(env: Record<string, string>) {
       // Minimal PATH only; deliberately NOT inheriting the caller's full
       // process.env so no ambient MVOLA_* value can leak into a variant.
       PATH: process.env.PATH ?? "",
+      // @types/node's ProcessEnv requires NODE_ENV. Set it explicitly rather
+      // than spreading process.env, which would reintroduce the ambient
+      // MVOLA_* values this minimal env exists to keep out.
+      NODE_ENV: "test",
       ...env,
     },
     encoding: "utf-8",
