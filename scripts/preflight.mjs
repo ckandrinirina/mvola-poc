@@ -223,17 +223,20 @@ export function maskMsisdn(msisdn) {
 }
 
 /**
- * Renders a URL for display with any embedded credentials or query values
- * stripped — a callback URL could carry Basic-auth userinfo or a signed
- * token/secret in its query string, and preflight must never echo those.
+ * Renders a URL for display with any embedded credentials, path, or query
+ * values stripped — a callback URL could carry Basic-auth userinfo, a signed
+ * token/secret in its query string, OR a per-tunnel secret token in the path
+ * itself (tunnel providers routinely put it there, not in the query), and
+ * preflight must never echo any of those. Only the origin is ever safe to
+ * print verbatim; everything after it is reduced to a presence marker.
  */
 export function maskUrl(rawUrl) {
   try {
     const parsed = new URL(rawUrl);
-    parsed.username = "";
-    parsed.password = "";
+    const hasPath = parsed.pathname && parsed.pathname !== "/";
+    const path = hasPath ? "/… (path masked)" : "/";
     const query = parsed.search ? " (query masked)" : "";
-    return `${parsed.origin}${parsed.pathname}${query}`;
+    return `${parsed.origin}${path}${query}`;
   } catch {
     return "[unparsable URL]";
   }

@@ -113,22 +113,47 @@ that would otherwise echo the full, unmasked URL (secrets included) in its error
 Failures print a single diagnostic line each (no stack traces); exit code is 0 only when
 every check passes.
 
-**Post-QA fix:** QA found the merchant MSISDN was printed in full in the environment info
-line, and (on re-audit) that a callback URL with embedded credentials or a secret query
-value would leak verbatim through `fetch`'s own validation error message. Both are fixed:
-`maskMsisdn`/`maskUrl` mask the displayed value, and `checkCallback` now strips credentials
-from the URL before it ever reaches `fetch`, closing the error-message leak at its source
-rather than only masking the successful-path display.
+**Post-QA fix (round 1):** QA found the merchant MSISDN was printed in full in the
+environment info line, and (on re-audit) that a callback URL with embedded credentials or
+a secret query value would leak verbatim through `fetch`'s own validation error message.
+Both are fixed: `maskMsisdn`/`maskUrl` mask the displayed value, and `checkCallback` now
+strips credentials from the URL before it ever reaches `fetch`, closing the error-message
+leak at its source rather than only masking the successful-path display.
 
-**Testing approach:** no dedicated test file was added — the story's declared file scope
-is `scripts/preflight.mjs`, `package.json`, `.env.example` only, and the two
-safety-critical checks (a real OAuth token request, a real network reachability probe) are
-inherently live-network operations unsuited to the Jest suite. Verified instead by running
-the script directly under multiple env combinations (no vars set, partial vars, an
-unreachable/invalid DNS domain, a reachable domain) and by invoking the exported pure
-functions directly (`checkEnvVars`, `parseEnvFile`, `loadEnv` precedence, `formatLine`).
-QA (`ck-code:qa-validator`) independently re-ran these checks and the full Jest suite
-(443 passed / 0 failed) and returned **PASS** on all 11 acceptance criteria.
+**Post-QA fix (round 2):** an adversarial re-check found `maskUrl` still interpolated
+`parsed.pathname` unmodified — a tunnel provider's per-tunnel secret token routinely lives
+in the URL *path*, not the query, so the path-masking gap was a real leak, not a
+theoretical one. Fixed: `maskUrl` now reduces any non-trivial pathname to a fixed
+`/… (path masked)` marker (plain `/` when there is no real path), matching the same
+treatment already given to userinfo and the query string. Re-verified against three
+adversarial `MVOLA_CALLBACK_URL` values — a path-embedded secret, combined
+userinfo+query secrets, and a malformed URL — none of the planted sentinel values appear
+anywhere in stdout/stderr.
+
+**Testing approach:** `scripts/preflight.mjs` is a real ESM (.mjs) module with no
+dedicated test file in the story's original declared scope
+(`scripts/preflight.mjs`, `package.json`, `.env.example`); the two most safety-critical
+checks (a real OAuth token request, a real network reachability probe) are inherently
+live-network operations unsuited to the Jest suite regardless. Initially verified by
+running the script directly under many env combinations (no vars, partial vars,
+unreachable/invalid DNS, reachable domain, path/query/userinfo-embedded secrets,
+malformed URLs) and by invoking the exported pure functions directly.
+
+A regression test was added afterward at `scripts/__tests__/preflight.test.ts` covering
+`maskUrl` (path secret, query secret, userinfo, malformed URL, path-present vs. no-path
+display) and `maskMsisdn` (normal value, 3-char, 1-char, empty) — every assertion checks
+that the planted sentinel does NOT appear in the returned string. **This file is
+discovered by Jest's `testMatch` (confirmed via `--listTests`) but its tests are
+`.skip`ped**: `scripts/preflight.mjs` is real ESM, and `jest.config.ts` (shared, outside
+this story's scope) only transforms `.tsx?` files with no ESM support configured — both a
+static `import` and a dynamic `import()` of the real `.mjs` file fail identically with
+`SyntaxError: Cannot use import statement outside a module`. Making the file run would
+require editing `jest.config.ts`, which this story is not permitted to touch; the test
+file documents this at its top and is ready to be un-skipped the moment that changes.
+
+QA (`ck-code:qa-validator`) independently re-ran the round-1 checks and the full Jest
+suite (443 passed / 0 failed) and returned **PASS** on all 11 acceptance criteria before
+round 2's adversarial re-check found the path-masking gap.
 
 **Files Touched:**
 - CREATED: `scripts/preflight.mjs`
