@@ -2,7 +2,7 @@
 id: 09-12
 title: `TransactionHistory` — Expandable Settled Row
 epic: 09
-status: todo
+status: in-progress
 size: L
 blocked_by: [09-08, 09-10]
 files: [src/components/TransactionHistory.tsx, src/__tests__/components/TransactionHistory.test.tsx]

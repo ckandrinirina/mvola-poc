@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TransactionHistory } from "@/components/TransactionHistory";
 import { WalletHeader } from "@/components/WalletHeader";
@@ -95,6 +95,85 @@ const FAILED_TX_ENTRY = {
   createdAt: 1745150050000,
   updatedAt: 1745150060000,
 };
+
+// ---- Story 09-12 fixtures: expandable settled row ----
+
+const SETTLED_NO_REF_ENTRY = {
+  kind: "transaction" as const,
+  localTxId: "tx_04HW",
+  correlationId: "550e8403",
+  direction: "deposit",
+  amount: 1500,
+  status: "completed",
+  createdAt: 1745150000000,
+  updatedAt: 1745150010000,
+};
+
+const FAILED_TX_WITH_REF = {
+  ...FAILED_TX_ENTRY,
+  localTxId: "tx_05HW",
+  mvolaReference: "MVL-2026-04-20-002",
+};
+
+const MVOLA_COMPARISON_BODY = {
+  mvola: {
+    amount: "5000",
+    currency: "Ar",
+    transactionReference: "MVL-2026-04-20-001",
+    transactionStatus: "completed",
+    createDate: "2026-04-20T10:00:00.000Z",
+    debitParty: [{ key: "msisdn", value: "0343500003" }],
+    creditParty: [{ key: "msisdn", value: "0343500099" }],
+  },
+  local: {
+    localTxId: "tx_01HW",
+    correlationId: "550e8400",
+    msisdn: "0343500003",
+    direction: "deposit",
+    amount: 5000,
+    status: "completed",
+    walletSettled: true,
+    mvolaReference: "MVL-2026-04-20-001",
+    createdAt: 1745150200000,
+    updatedAt: 1745150260000,
+  },
+};
+
+/**
+ * Builds a fetch mock that routes by URL: `/balance`, `/api/config/polling`,
+ * `/api/mvola/transaction/*` (details), and everything else as the history
+ * response carrying `entries`.
+ */
+function buildFetchMock({
+  entries,
+  pollTimeoutMs = 120_000,
+  detailsHandler,
+}: {
+  entries: unknown[];
+  pollTimeoutMs?: number;
+  detailsHandler?: jest.Mock;
+}) {
+  return (url: string) => {
+    if (url.includes("/balance")) {
+      return Promise.resolve({ ok: true, json: async () => ({ balance: 5000 }) });
+    }
+    if (url.includes("/api/config/polling")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ pollIntervalMs: 3000, pollTimeoutMs }),
+      });
+    }
+    if (url.includes("/api/mvola/transaction/")) {
+      return detailsHandler
+        ? detailsHandler(url)
+        : Promise.resolve({ ok: true, json: async () => ({}) });
+    }
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ msisdn: "0343500003", entries }),
+    });
+  };
+}
 
 describe("TransactionHistory", () => {
   beforeEach(() => {
@@ -561,6 +640,325 @@ describe("TransactionHistory", () => {
     await waitFor(() => {
       // balanceAfter is 4000
       expect(screen.getByText(/4.*000 Ar|4000 Ar/)).toBeInTheDocument();
+    });
+  });
+
+  // ---- Story 09-12: expandable settled row ----
+
+  describe("expandable settled row", () => {
+    beforeEach(() => {
+      localStorageStore["mvola-prof.msisdn"] = "0343500003";
+    });
+
+    it("exposes an expand control on a completed row with an mvolaReference", async () => {
+      mockFetch.mockImplementation(buildFetchMock({ entries: [TRANSACTION_ENTRY] }));
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: /compare with mvola/i });
+        expect(button.tagName).toBe("BUTTON");
+        expect(button).toHaveAttribute("aria-expanded", "false");
+      });
+    });
+
+    it("exposes an expand control on a failed settled row with an mvolaReference too", async () => {
+      mockFetch.mockImplementation(buildFetchMock({ entries: [FAILED_TX_WITH_REF] }));
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /compare with mvola/i })).toBeInTheDocument();
+      });
+    });
+
+    it("fetches transaction details once on expand; collapsing and re-expanding does not refetch", async () => {
+      const detailsHandler = jest.fn(() =>
+        Promise.resolve({ ok: true, json: async () => MVOLA_COMPARISON_BODY })
+      );
+      mockFetch.mockImplementation(
+        buildFetchMock({ entries: [TRANSACTION_ENTRY], detailsHandler })
+      );
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      const button = await screen.findByRole("button", { name: /compare with mvola/i });
+
+      await act(async () => {
+        fireEvent.click(button); // expand — first fetch
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => expect(detailsHandler).toHaveBeenCalledTimes(1));
+      expect(detailsHandler.mock.calls[0][0]).toContain("MVL-2026-04-20-001");
+
+      await act(async () => {
+        fireEvent.click(button); // collapse
+      });
+      await act(async () => {
+        fireEvent.click(button); // re-expand — must not refetch
+        await Promise.resolve();
+      });
+
+      expect(detailsHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it("renders MVola and local records as separate, labelled columns", async () => {
+      const detailsHandler = jest.fn(() =>
+        Promise.resolve({ ok: true, json: async () => MVOLA_COMPARISON_BODY })
+      );
+      mockFetch.mockImplementation(
+        buildFetchMock({ entries: [TRANSACTION_ENTRY], detailsHandler })
+      );
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      const button = await screen.findByRole("button", { name: /compare with mvola/i });
+      await act(async () => {
+        fireEvent.click(button);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/mvola record/i)).toBeInTheDocument();
+        expect(screen.getByText(/local record/i)).toBeInTheDocument();
+        // MVola column renders whatever keys are present, generically
+        expect(screen.getByText(/transactionStatus/)).toBeInTheDocument();
+        expect(screen.getByText(/msisdn: 0343500003/)).toBeInTheDocument();
+        // Local column renders its own record
+        expect(screen.getByText(/walletSettled/)).toBeInTheDocument();
+      });
+    });
+
+    it("shows a loading state while the details fetch is in flight", async () => {
+      let resolveDetails!: (value: unknown) => void;
+      const detailsHandler = jest.fn(
+        () =>
+          new Promise((resolve) => {
+            resolveDetails = resolve;
+          })
+      );
+      mockFetch.mockImplementation(
+        buildFetchMock({ entries: [TRANSACTION_ENTRY], detailsHandler })
+      );
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      const button = await screen.findByRole("button", { name: /compare with mvola/i });
+      fireEvent.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByText(/loading transaction details/i)).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        resolveDetails({ ok: true, json: async () => MVOLA_COMPARISON_BODY });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText(/loading transaction details/i)).not.toBeInTheDocument();
+        expect(screen.getByText(/mvola record/i)).toBeInTheDocument();
+      });
+    });
+
+    it('renders "No local transaction carries that reference" on a 404, without fabricating a record', async () => {
+      const detailsHandler = jest.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 404,
+          json: async () => ({ error: "No local transaction carries that reference" }),
+        })
+      );
+      mockFetch.mockImplementation(
+        buildFetchMock({ entries: [TRANSACTION_ENTRY], detailsHandler })
+      );
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      const button = await screen.findByRole("button", { name: /compare with mvola/i });
+      await act(async () => {
+        fireEvent.click(button);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/no local transaction carries that reference/i)
+        ).toBeInTheDocument();
+        expect(screen.queryByText(/mvola record/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it("renders the MVola error on a 502, without fabricating a record", async () => {
+      const detailsHandler = jest.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 502,
+          json: async () => ({ error: "MVola API error", details: "upstream timeout" }),
+        })
+      );
+      mockFetch.mockImplementation(
+        buildFetchMock({ entries: [TRANSACTION_ENTRY], detailsHandler })
+      );
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      const button = await screen.findByRole("button", { name: /compare with mvola/i });
+      await act(async () => {
+        fireEvent.click(button);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/mvola api error/i)).toBeInTheDocument();
+        expect(screen.getByText(/upstream timeout/i)).toBeInTheDocument();
+        expect(screen.queryByText(/mvola record/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it("offers a retry after a failed details fetch, which re-fetches", async () => {
+      const detailsHandler = jest
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 502,
+          json: async () => ({ error: "MVola API error", details: "boom" }),
+        })
+        .mockResolvedValueOnce({ ok: true, json: async () => MVOLA_COMPARISON_BODY });
+      mockFetch.mockImplementation(
+        buildFetchMock({ entries: [TRANSACTION_ENTRY], detailsHandler })
+      );
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      const button = await screen.findByRole("button", { name: /compare with mvola/i });
+      await act(async () => {
+        fireEvent.click(button);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      const retryButton = await screen.findByRole("button", { name: /retry/i });
+      await act(async () => {
+        fireEvent.click(retryButton);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/mvola record/i)).toBeInTheDocument();
+      });
+      expect(detailsHandler).toHaveBeenCalledTimes(2);
+    });
+
+    it("renders PendingApprovalBanner instead of an expand control for a pending row", async () => {
+      mockFetch.mockImplementation(
+        buildFetchMock({ entries: [PENDING_TX_ENTRY], pollTimeoutMs: 90_000 })
+      );
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("status")).toBeInTheDocument();
+        expect(
+          screen.queryByRole("button", { name: /compare with mvola/i })
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    it("explains why a settled row without an mvolaReference cannot be opened, rather than a dead control", async () => {
+      mockFetch.mockImplementation(
+        buildFetchMock({ entries: [SETTLED_NO_REF_ENTRY] })
+      );
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/no mvola reference was recorded/i)).toBeInTheDocument();
+        expect(
+          screen.queryByRole("button", { name: /compare with mvola/i })
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    it("leaves game rows unaffected by row-expansion behaviour", async () => {
+      mockFetch.mockImplementation(buildFetchMock({ entries: [GAME_ENTRY] }));
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/heads|tails/i)).toBeInTheDocument();
+      });
+      expect(
+        screen.queryByRole("button", { name: /compare with mvola/i })
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+
+    it("keeps the expand control keyboard-operable with aria-expanded reflecting state", async () => {
+      const detailsHandler = jest.fn(() =>
+        Promise.resolve({ ok: true, json: async () => MVOLA_COMPARISON_BODY })
+      );
+      mockFetch.mockImplementation(
+        buildFetchMock({ entries: [TRANSACTION_ENTRY], detailsHandler })
+      );
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      const button = await screen.findByRole("button", { name: /compare with mvola/i });
+      expect(button.tagName).toBe("BUTTON"); // native button — keyboard support is free
+      expect(button).toHaveAttribute("aria-expanded", "false");
+
+      await act(async () => {
+        button.focus();
+        fireEvent.click(button);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(button).toHaveAttribute("aria-expanded", "true");
     });
   });
 });
