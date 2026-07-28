@@ -2,12 +2,64 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useMsisdnContext } from "@/components/WalletHeader";
+import { PendingApprovalBanner } from "@/components/PendingApprovalBanner";
 
-type TransactionStatus = "pending" | "completed" | "failed" | null;
+type TransactionStatus = "pending" | "completed" | "failed" | "still-pending" | null;
 
 interface InsufficientFundsError {
   balance: number;
   requested: number;
+}
+
+/** Fallbacks used until `GET /api/config/polling` resolves, and whenever it fails —
+ * the client must never block polling on that fetch (see `usePollingConfig` below). */
+const DEFAULT_POLL_INTERVAL_MS = 3000;
+const DEFAULT_POLL_TIMEOUT_MS = 120000;
+
+interface PollingConfig {
+  pollIntervalMs: number;
+  pollTimeoutMs: number;
+}
+
+/**
+ * Reads the server's polling policy once per mount via `GET /api/config/polling`.
+ *
+ * Never reads `src/lib/mvola/polling.ts` directly — that module is server-only. A
+ * failed or malformed response is not fatal: the defaults above are used instead so
+ * polling itself is never blocked on this fetch (story 09-11 AC1).
+ */
+function usePollingConfig(): PollingConfig {
+  const [config, setConfig] = useState<PollingConfig>({
+    pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
+    pollTimeoutMs: DEFAULT_POLL_TIMEOUT_MS,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/config/polling")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("config fetch failed"))))
+      .then((body) => {
+        if (cancelled) return;
+        const pollIntervalMs =
+          typeof body?.pollIntervalMs === "number" && body.pollIntervalMs > 0
+            ? body.pollIntervalMs
+            : DEFAULT_POLL_INTERVAL_MS;
+        const pollTimeoutMs =
+          typeof body?.pollTimeoutMs === "number" && body.pollTimeoutMs > 0
+            ? body.pollTimeoutMs
+            : DEFAULT_POLL_TIMEOUT_MS;
+        setConfig({ pollIntervalMs, pollTimeoutMs });
+      })
+      .catch(() => {
+        // Keep the defaults already set as initial state — a broken config route
+        // must never prevent polling from starting.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return config;
 }
 
 export default function CashOutForm() {
@@ -21,8 +73,16 @@ export default function CashOutForm() {
   const [insufficientFunds, setInsufficientFunds] =
     useState<InsufficientFundsError | null>(null);
   const [loading, setLoading] = useState(false);
+  const [submittedAt, setSubmittedAt] = useState<number | null>(null);
+
+  const config = usePollingConfig();
+  const configRef = useRef(config);
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync amount with balance changes (keeps default = balance)
   useEffect(() => {
@@ -35,23 +95,47 @@ export default function CashOutForm() {
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
   const isTerminal =
     transactionStatus === "completed" || transactionStatus === "failed";
 
+  function stopPolling() {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }
+
   const startPolling = (id: string) => {
+    // Clear any existing interval/timeout before starting new ones
+    stopPolling();
+    const { pollIntervalMs, pollTimeoutMs } = configRef.current;
+
     intervalRef.current = setInterval(async () => {
       const res = await fetch(`/api/mvola/status/${id}`);
       const data = await res.json();
       const status = data.transactionStatus as TransactionStatus;
       setTransactionStatus(status);
       if (status === "completed" || status === "failed") {
-        clearInterval(intervalRef.current!);
+        stopPolling();
         refreshBalance();
       }
-    }, 3000);
+    }, pollIntervalMs);
+
+    // Reaching the ceiling is a reporting boundary only (rule R3): it must never set
+    // the status to "failed", never call `refreshBalance()`, and never show an error
+    // style — the transaction may yet settle by callback.
+    timeoutRef.current = setTimeout(() => {
+      stopPolling();
+      setTransactionStatus("still-pending");
+    }, pollTimeoutMs);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,6 +150,10 @@ export default function CashOutForm() {
     setError(null);
     setInsufficientFunds(null);
     setLoading(true);
+    setSubmittedAt(null);
+
+    // Clear any existing polling before new submit
+    stopPolling();
 
     const res = await fetch("/api/mvola/withdraw", {
       method: "POST",
@@ -87,6 +175,7 @@ export default function CashOutForm() {
 
     setCorrelationId(data.correlationId);
     setTransactionStatus("pending");
+    setSubmittedAt(Date.now());
     startPolling(data.correlationId);
   };
 
@@ -159,11 +248,22 @@ export default function CashOutForm() {
                   <span className="italic">wallet refunded</span>
                 </>
               )}
+              {transactionStatus === "still-pending" &&
+                "Still pending — waiting for MVola"}
               {!transactionStatus && "Initiating..."}
             </span>
           </p>
         </div>
       )}
+
+      {(transactionStatus === "pending" || transactionStatus === "still-pending") &&
+        submittedAt != null && (
+          <PendingApprovalBanner
+            startedAt={submittedAt}
+            pollTimeoutMs={config.pollTimeoutMs}
+            timedOut={transactionStatus === "still-pending"}
+          />
+        )}
     </form>
   );
 }

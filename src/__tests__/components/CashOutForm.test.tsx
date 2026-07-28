@@ -57,6 +57,27 @@ function renderWithContext(balance = 5000, msisdn = "0343500003") {
   );
 }
 
+/**
+ * Renders with a caller-supplied `mockFetch.mockImplementation` already active
+ * *before* mount. Unlike `renderWithContext`, this does not install its own
+ * balance-only mock — the caller's implementation must cover `/balance` too. Needed
+ * whenever a test cares about `GET /api/config/polling`: that fetch fires once from
+ * `usePollingConfig`'s mount effect, before any post-render `mockImplementation`
+ * reassignment would ever be seen.
+ */
+function renderWithMock(
+  mockImpl: (url: string, options?: RequestInit) => Promise<unknown>,
+  msisdn = "0343500003"
+) {
+  localStorageStore["mvola-prof.msisdn"] = msisdn;
+  mockFetch.mockImplementation(mockImpl);
+  return render(
+    <WalletHeader>
+      <CashOutForm />
+    </WalletHeader>
+  );
+}
+
 describe("CashOutForm", () => {
   beforeEach(() => {
     jest.resetAllMocks();
@@ -465,5 +486,287 @@ describe("CashOutForm", () => {
       const body = JSON.parse((call![1] as RequestInit).body as string);
       expect(body).toMatchObject({ msisdn: "0343500003", amount: 5000 });
     });
+  });
+
+  // ---- Configured polling interval + ceiling + banner (story 09-11) ----
+  //
+  // These use `renderWithMock` (not `renderWithContext`) because the polling-config
+  // fetch fires once from `usePollingConfig`'s mount effect — it must be part of the
+  // very first mock, not a later reassignment.
+
+  it("polls at the pollIntervalMs returned by GET /api/config/polling, not the old hardcoded 3000", async () => {
+    await act(async () => {
+      renderWithMock((url: string) => {
+        if (typeof url === "string" && url.includes("/api/config/polling")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ pollIntervalMs: 5000, pollTimeoutMs: 120000 }),
+          });
+        }
+        if (typeof url === "string" && url.includes("/balance")) {
+          return Promise.resolve({ ok: true, json: async () => ({ balance: 5000 }) });
+        }
+        if (url === "/api/mvola/withdraw") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ correlationId: "cfg-cash-001" }),
+          });
+        }
+        if (typeof url === "string" && url.includes("/api/mvola/status/")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ transactionStatus: "pending" }),
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(0);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      const input = screen.getByRole("spinbutton") as HTMLInputElement;
+      expect(Number(input.value)).toBe(5000);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /cash.?out/i }));
+      await Promise.resolve();
+    });
+
+    const statusCallsAfterSubmit = mockFetch.mock.calls.filter(
+      (c) => typeof c[0] === "string" && (c[0] as string).includes("/api/mvola/status/")
+    ).length;
+
+    // The old hardcoded interval (3000 ms) must NOT trigger a poll now
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+    const statusCallsAt3000 = mockFetch.mock.calls.filter(
+      (c) => typeof c[0] === "string" && (c[0] as string).includes("/api/mvola/status/")
+    ).length;
+    expect(statusCallsAt3000).toBe(statusCallsAfterSubmit);
+
+    // Reaching the configured 5000 ms must trigger exactly one poll
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+      await Promise.resolve();
+    });
+    const statusCallsAt5000 = mockFetch.mock.calls.filter(
+      (c) => typeof c[0] === "string" && (c[0] as string).includes("/api/mvola/status/")
+    ).length;
+    expect(statusCallsAt5000).toBe(statusCallsAfterSubmit + 1);
+  });
+
+  it("reaches still-pending at pollTimeoutMs without calling refreshBalance or altering the balance", async () => {
+    let balanceFetchCount = 0;
+
+    await act(async () => {
+      renderWithMock((url: string) => {
+        if (typeof url === "string" && url.includes("/api/config/polling")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ pollIntervalMs: 3000, pollTimeoutMs: 7000 }),
+          });
+        }
+        if (typeof url === "string" && url.includes("/balance")) {
+          balanceFetchCount++;
+          return Promise.resolve({ ok: true, json: async () => ({ balance: 4000 }) });
+        }
+        if (url === "/api/mvola/withdraw") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ correlationId: "ceiling-cash-001" }),
+          });
+        }
+        if (typeof url === "string" && url.includes("/api/mvola/status/")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ transactionStatus: "pending" }),
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(0);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      const input = screen.getByRole("spinbutton") as HTMLInputElement;
+      expect(Number(input.value)).toBe(4000);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /cash.?out/i }));
+      await Promise.resolve();
+    });
+
+    // Advance to just short of the 7000 ms ceiling (intermediate polls at 3000/6000
+    // stay pending). WalletHeader's own balance poll (every 2000 ms, unrelated to
+    // this story) also ticks in this window — expected, not what this checks.
+    await act(async () => {
+      jest.advanceTimersByTime(6000);
+      await Promise.resolve();
+    });
+    const balanceCallsAt6000 = balanceFetchCount;
+
+    // Cross the ceiling. WalletHeader's next periodic tick lands at 8000, not here —
+    // so any increase in this narrow window is our own refreshBalance, and none is
+    // expected: a timeout must never move the balance (rule R3).
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/still pending — waiting for mvola/i)
+      ).toBeInTheDocument();
+    });
+
+    // Never uses the word "failed" for this state
+    expect(screen.queryByText(/cash.?out failed/i)).not.toBeInTheDocument();
+
+    // refreshBalance must NOT have fired for the ceiling crossing itself
+    expect(balanceFetchCount).toBe(balanceCallsAt6000);
+
+    // Polling must have stopped — no further status calls after the ceiling
+    const statusCallsAtCeiling = mockFetch.mock.calls.filter(
+      (c) => typeof c[0] === "string" && (c[0] as string).includes("/api/mvola/status/")
+    ).length;
+
+    await act(async () => {
+      jest.advanceTimersByTime(10000);
+      await Promise.resolve();
+    });
+
+    const statusCallsAfter = mockFetch.mock.calls.filter(
+      (c) => typeof c[0] === "string" && (c[0] as string).includes("/api/mvola/status/")
+    ).length;
+    expect(statusCallsAfter).toBe(statusCallsAtCeiling);
+  });
+
+  it("renders PendingApprovalBanner while pending, with the submission time and pollTimeoutMs", async () => {
+    await act(async () => {
+      renderWithMock((url: string) => {
+        if (typeof url === "string" && url.includes("/api/config/polling")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ pollIntervalMs: 3000, pollTimeoutMs: 120000 }),
+          });
+        }
+        if (typeof url === "string" && url.includes("/balance")) {
+          return Promise.resolve({ ok: true, json: async () => ({ balance: 4000 }) });
+        }
+        if (url === "/api/mvola/withdraw") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ correlationId: "banner-cash-001" }),
+          });
+        }
+        if (typeof url === "string" && url.includes("/api/mvola/status/")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ transactionStatus: "pending" }),
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(0);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      const input = screen.getByRole("spinbutton") as HTMLInputElement;
+      expect(Number(input.value)).toBe(4000);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /cash.?out/i }));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/waiting for mvola approval/i)).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/remaining budget/i)).toBeInTheDocument();
+    });
+  });
+
+  // ---- Cleanup on unmount ----
+
+  it("clears interval and ceiling timeout on unmount", async () => {
+    const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+    const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
+
+    let unmount: () => void;
+    await act(async () => {
+      const result = renderWithMock((url: string) => {
+        if (typeof url === "string" && url.includes("/api/config/polling")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ pollIntervalMs: 3000, pollTimeoutMs: 120000 }),
+          });
+        }
+        if (typeof url === "string" && url.includes("/balance")) {
+          return Promise.resolve({ ok: true, json: async () => ({ balance: 4000 }) });
+        }
+        if (url === "/api/mvola/withdraw") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ correlationId: "unmount-cash-001" }),
+          });
+        }
+        if (typeof url === "string" && url.includes("/api/mvola/status/")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ transactionStatus: "pending" }),
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      });
+      unmount = result.unmount;
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(0);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      const input = screen.getByRole("spinbutton") as HTMLInputElement;
+      expect(Number(input.value)).toBe(4000);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /cash.?out/i }));
+      await Promise.resolve();
+    });
+
+    unmount!();
+
+    expect(clearIntervalSpy).toHaveBeenCalled();
+    expect(clearTimeoutSpy).toHaveBeenCalled();
   });
 });
