@@ -2,7 +2,7 @@
 id: 09-06
 title: Settled-Reference Retention + Lookup by `mvolaReference`
 epic: 09
-status: in-progress
+status: done
 size: S
 blocked_by: [09-01]
 files: [src/lib/store/transactions.ts, src/lib/mvola/reconcile.ts, src/lib/store/__tests__/transactions.test.ts, src/lib/mvola/__tests__/reconcile.test.ts]

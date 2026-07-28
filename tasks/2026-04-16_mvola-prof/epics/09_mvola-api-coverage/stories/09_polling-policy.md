@@ -2,7 +2,7 @@
 id: 09-09
 title: Polling Policy Module + Client Config Exposure
 epic: 09
-status: in-progress
+status: done
 size: M
 blocked_by: [09-01]
 files: [src/lib/mvola/polling.ts, src/app/api/config/polling/route.ts, .env.example, src/lib/mvola/__tests__/polling.test.ts, src/app/api/config/polling/__tests__/route.test.ts]

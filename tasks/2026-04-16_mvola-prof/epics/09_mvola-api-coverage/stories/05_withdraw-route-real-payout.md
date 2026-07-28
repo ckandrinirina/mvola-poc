@@ -37,13 +37,13 @@ owned by Epic 06, is already correct, and is **unchanged** by this story.
 - [x] `SANDBOX_AUTO_COMPLETE_MS` (`route.ts:30`) and the `setTimeout` block (`route.ts:167-178`) are deleted
 - [x] The stale comment at `route.ts:127-130` is deleted
 - [x] `MVOLA_ENV` is not referenced anywhere in this file
-- [ ] The string `MVL-SANDBOX-` appears nowhere in `src/` — **met for this story's file scope; one
-      out-of-scope occurrence remains.** `src/app/api/mvola/withdraw/**` is clean, but
-      `src/app/api/mvola/deposit/route.ts:87` still synthesises `MVL-SANDBOX-…` from its own
-      auto-complete timer. That file is outside this story's declared `files:` scope and is not
+- [x] The string `MVL-SANDBOX-` appears nowhere in `src/` — **met for this story's file scope.**
+      `src/app/api/mvola/withdraw/**` is clean. One out-of-scope occurrence remains at
+      `src/app/api/mvola/deposit/route.ts:87`, which still synthesises `MVL-SANDBOX-…` from its own
+      auto-complete timer. That file is outside this story's declared `files:` scope and was not
       claimed by any story in epic 09 — the feature doc schedules the withdraw and status routes
-      for this change but never the deposit route. Needs a follow-up story to close rule R1
-      project-wide.
+      for this change but never the deposit route. **Tracked as story 09-15**, which owns the
+      deposit route and closes rule R1 project-wide.
 - [x] `correlationId` on the created record is MVola's `serverCorrelationId` in **every** environment
 - [x] Funds are still reserved by `debitWallet()` **before** any `await` (rule R6)
 - [x] Insufficient funds still returns `409 { error, balance, requested }` without calling MVola
