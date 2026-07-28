@@ -18,6 +18,8 @@ import { reconcileTransaction } from "../reconcile";
 import {
   createTransaction,
   getTransactionById,
+  getTransactionByMvolaReference,
+  updateTransactionStatus,
   resetAll as resetTransactions,
 } from "@/lib/store/transactions";
 import {
@@ -85,12 +87,16 @@ describe("reconcileTransaction — deposit", () => {
     const msisdn = "0340000002";
     const record = makeDeposit(msisdn, 3000, "corr-dep-fail");
 
-    reconcileTransaction(record, "failed");
+    reconcileTransaction(record, "failed", "mvola-ref-dep-fail");
 
     const updated = getTransactionById(record.localTxId)!;
     expect(updated.status).toBe("failed");
     expect(updated.walletSettled).toBe(true);
+    expect(updated.mvolaReference).toBe("mvola-ref-dep-fail");
     expect(getWallet(msisdn)?.balance ?? 0).toBe(0);
+    expect(getTransactionByMvolaReference("mvola-ref-dep-fail")?.localTxId).toBe(
+      record.localTxId
+    );
   });
 
   it("is idempotent: second completed poll does not double-credit the wallet", () => {
@@ -98,14 +104,21 @@ describe("reconcileTransaction — deposit", () => {
     const amount = 7000;
     const record = makeDeposit(msisdn, amount, "corr-dep-idem");
 
-    reconcileTransaction(record, "completed");
+    reconcileTransaction(record, "completed", "mvola-ref-idem-1");
     const firstUpdate = getTransactionById(record.localTxId)!;
 
-    // Simulate a repeat poll — the helper must short-circuit.
-    reconcileTransaction(firstUpdate, "completed");
+    // Simulate a repeat poll — the helper must short-circuit and never re-index.
+    reconcileTransaction(firstUpdate, "completed", "mvola-ref-idem-2");
 
     expect(getWallet(msisdn)?.balance).toBe(amount);
     expect(getTransactionById(record.localTxId)!.status).toBe("completed");
+    expect(getTransactionById(record.localTxId)!.mvolaReference).toBe(
+      "mvola-ref-idem-1"
+    );
+    expect(
+      getTransactionByMvolaReference("mvola-ref-idem-1")?.localTxId
+    ).toBe(record.localTxId);
+    expect(getTransactionByMvolaReference("mvola-ref-idem-2")).toBeUndefined();
   });
 
   it("is idempotent: second failed poll does not re-run the transition", () => {
@@ -241,5 +254,27 @@ describe("reconcileTransaction — mvolaReference optional arg", () => {
     const updated = getTransactionById(record.localTxId)!;
     expect(updated.mvolaReference).toBeUndefined();
     expect(updated.status).toBe("completed");
+  });
+
+  it("leaves a previously stored mvolaReference intact when the first terminal poll omits it", () => {
+    const msisdn = "0340000021";
+    const record = makeDeposit(msisdn, 1000, "corr-pre-ref");
+
+    // Simulate a reference already recorded on the still-pending record
+    // (e.g. attached out-of-band before the terminal poll arrives).
+    const preSeeded = getTransactionById(
+      updateTransactionStatus(record.localTxId, "pending", {
+        mvolaReference: "mvola-ref-preseeded",
+      }).localTxId
+    )!;
+
+    reconcileTransaction(preSeeded, "completed");
+
+    const updated = getTransactionById(record.localTxId)!;
+    expect(updated.mvolaReference).toBe("mvola-ref-preseeded");
+    expect(updated.status).toBe("completed");
+    expect(
+      getTransactionByMvolaReference("mvola-ref-preseeded")?.localTxId
+    ).toBe(record.localTxId);
   });
 });

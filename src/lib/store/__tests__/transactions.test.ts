@@ -2,6 +2,7 @@ import {
   createTransaction,
   getTransactionByCorrelationId,
   getTransactionById,
+  getTransactionByMvolaReference,
   updateTransactionStatus,
   listTransactionsByMsisdn,
   resetAll,
@@ -212,10 +213,88 @@ describe("updateTransactionStatus", () => {
     expect(updated.walletSettled).toBe(true);
   });
 
+  it("indexes mvolaReference for O(1) lookup when provided in patch", () => {
+    const record = createTransaction({
+      msisdn: "0340000001",
+      direction: "deposit",
+      amount: 1000,
+      correlationId: "corr-patch-index",
+      walletSettled: false,
+    });
+    updateTransactionStatus(record.localTxId, "completed", {
+      mvolaReference: "mvola-ref-index-1",
+    });
+    const found = getTransactionByMvolaReference("mvola-ref-index-1");
+    expect(found?.localTxId).toBe(record.localTxId);
+  });
+
+  it("leaves a previously stored mvolaReference intact when patch.mvolaReference is undefined", () => {
+    const record = createTransaction({
+      msisdn: "0340000001",
+      direction: "deposit",
+      amount: 1000,
+      correlationId: "corr-patch-keep-ref",
+      walletSettled: false,
+    });
+    updateTransactionStatus(record.localTxId, "pending", {
+      mvolaReference: "mvola-ref-keep",
+    });
+
+    const updated = updateTransactionStatus(record.localTxId, "completed", {
+      walletSettled: true,
+    });
+
+    expect(updated.mvolaReference).toBe("mvola-ref-keep");
+    expect(getTransactionByMvolaReference("mvola-ref-keep")?.localTxId).toBe(
+      record.localTxId
+    );
+  });
+
+  it("does not index or store an empty-string mvolaReference", () => {
+    const record = createTransaction({
+      msisdn: "0340000001",
+      direction: "deposit",
+      amount: 1000,
+      correlationId: "corr-empty-ref",
+      walletSettled: false,
+    });
+    const updated = updateTransactionStatus(record.localTxId, "completed", {
+      mvolaReference: "",
+    });
+    expect(updated.mvolaReference).toBeUndefined();
+    expect(getTransactionByMvolaReference("")).toBeUndefined();
+  });
+
   it("throws if the record does not exist", () => {
     expect(() =>
       updateTransactionStatus("no-such-id", "completed")
     ).toThrow(/not found/i);
+  });
+});
+
+describe("getTransactionByMvolaReference", () => {
+  it("returns the record when found", () => {
+    const created = createTransaction({
+      msisdn: "0340000001",
+      direction: "deposit",
+      amount: 1000,
+      correlationId: "corr-ref-lookup",
+      walletSettled: false,
+    });
+    const updated = updateTransactionStatus(created.localTxId, "completed", {
+      mvolaReference: "mvola-ref-lookup-1",
+      walletSettled: true,
+    });
+    const found = getTransactionByMvolaReference("mvola-ref-lookup-1");
+    expect(found).toEqual(updated);
+  });
+
+  it("returns undefined when the reference is unknown", () => {
+    expect(getTransactionByMvolaReference("no-such-reference")).toBeUndefined();
+  });
+
+  it("returns undefined for an empty-string reference", () => {
+    expect(getTransactionByMvolaReference("")).toBeUndefined();
   });
 });
 
@@ -286,6 +365,21 @@ describe("resetAll", () => {
     expect(getTransactionById(record.localTxId)).toBeUndefined();
     expect(getTransactionByCorrelationId("corr-reset")).toBeUndefined();
     expect(listTransactionsByMsisdn("0340000001")).toEqual([]);
+  });
+
+  it("clears the mvolaReference index", () => {
+    const record = createTransaction({
+      msisdn: "0340000001",
+      direction: "deposit",
+      amount: 1000,
+      correlationId: "corr-reset-ref",
+      walletSettled: false,
+    });
+    updateTransactionStatus(record.localTxId, "completed", {
+      mvolaReference: "mvola-ref-reset",
+    });
+    resetAll();
+    expect(getTransactionByMvolaReference("mvola-ref-reset")).toBeUndefined();
   });
 
   it("allows creating a transaction with the same correlationId after reset", () => {
