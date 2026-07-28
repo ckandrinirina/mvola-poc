@@ -34,7 +34,7 @@
 | 08 · Tabbed Ui | 08-05 | Refactor `WithdrawForm` → `CashOutForm` — Wallet-Aware | DONE | M | 06-03, 06-04, 06-05, 08-01 | epics/08_tabbed-ui/stories/05_cashout-form-refactor.md |
 | 08 · Tabbed Ui | 08-06 | `TransactionHistory` Component — Merged History List | DONE | M | 07-04, 08-01 | epics/08_tabbed-ui/stories/06_transaction-history-component.md |
 | 08 · Tabbed Ui | 08-07 | Compose `page.tsx` + `layout.tsx` | DONE | S | 08-01, 08-02, 08-03, 08-04, 08-05, 08-06 | epics/08_tabbed-ui/stories/07_page-composition.md |
-| 09 · Mvola Api Coverage | 09-01 | Repair the `CoinFlipGame` Test Suite | TODO | S | - | epics/09_mvola-api-coverage/stories/01_repair-coinflip-tests.md |
+| 09 · Mvola Api Coverage | 09-01 | Repair the `CoinFlipGame` Test Suite | DONE | S | - | epics/09_mvola-api-coverage/stories/01_repair-coinflip-tests.md |
 | 09 · Mvola Api Coverage | 09-02 | `parseMvolaStatus()` — Shared Status Reader + Type Corrections | TODO | M | 09-01 | epics/09_mvola-api-coverage/stories/02_parse-mvola-status.md |
 | 09 · Mvola Api Coverage | 09-03 | Status Route — Remove the Sandbox Short-Circuit | TODO | M | 09-02 | epics/09_mvola-api-coverage/stories/03_status-route-real-mvola.md |
 | 09 · Mvola Api Coverage | 09-04 | Callback Route — Unified Interpretation | TODO | S | 09-02 | epics/09_mvola-api-coverage/stories/04_callback-unified-interpretation.md |
