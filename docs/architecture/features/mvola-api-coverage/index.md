@@ -1,7 +1,15 @@
 ---
 slug: mvola-api-coverage
-design: pending
+design: verified
 ---
+
+<!--
+design: verified — the design was exercised end-to-end against the MVola sandbox during
+story 09-14: 2 real deposits and 2 real cash-outs settled (each with an MVola reference),
+2 game rounds, and a live callback delivery captured. Two shapes remain observed for the
+withdraw direction only: the deposit details key set, and any non-`completed` status value.
+-->
+
 
 # MVola API Coverage & Demo Credibility
 
@@ -237,16 +245,53 @@ Retrieve MVola's authoritative record of a settled transaction alongside the loc
 
 **Observed key set — first successful call (live capture):**
 
-```
-PASTE THE OBSERVED KEY SET HERE — DO NOT FILL IN BY HAND.
-Captured during the docs/architecture/dev-guide.md "Live Sandbox Walkthrough" runbook
-(story 09-14), step 5, from a real GET /api/mvola/transaction/{reference} response after
-a settled deposit. Record the key names present in the real `mvola` object (redact MSISDN
-values in debitParty/creditParty — keep only the last 3 digits).
+Captured from a real `GET /api/mvola/transaction/{reference}` call against a **settled
+sandbox cash-out** (not a deposit — see the caveat below). MSISDN and amount values are
+redacted; key names and structure are verbatim.
+
+```json
+{
+  "mvola": {
+    "amount": "<redacted>",
+    "currency": "Ar",
+    "requestDate": "<ISO-8601>",
+    "debitParty":  [{ "key": "msisdn", "value": "<redacted>" }],
+    "creditParty": [{ "key": "msisdn", "value": "<redacted>" }],
+    "fees":        [{ "feeAmount": "<redacted>" }],
+    "metadata": [
+      { "key": "originalTransactionResult",     "value": "0" },
+      { "key": "originalTransactionResultDesc", "value": "0" },
+      { "key": "XCorrelationId",                "value": "<uuid>" }
+    ],
+    "transactionStatus": "completed",
+    "creationDate": "<ISO-8601>",
+    "transactionReference": "<numeric string>"
+  },
+  "local": {
+    "localTxId": "<uuid>", "correlationId": "<uuid>", "msisdn": "<redacted>",
+    "direction": "withdraw", "amount": "<redacted>", "status": "completed",
+    "walletSettled": true, "createdAt": <epoch ms>, "updatedAt": <epoch ms>,
+    "mvolaReference": "<numeric string>"
+  }
+}
 ```
 
-This block remains empty until story 09-14's live run produces a settled transaction
-reference and successfully calls this route with it.
+**Observed facts:**
+
+- The `mvola` object uses `transactionStatus` / `transactionReference` — consistent with the
+  callback, and confirming the details endpoint does not use the status endpoint's
+  `status` / `objectReference` spelling.
+- It carries **`creationDate` in addition to `requestDate`** — two distinct timestamps, and
+  `creationDate` was ~8 minutes earlier than `requestDate` on the observed record. Do not
+  assume either is "the" transaction time without checking which one you mean.
+- `metadata` includes `originalTransactionResult` and `originalTransactionResultDesc`, both
+  `"0"` on success. These do **not** appear in the callback payload.
+- The route's forward-unaltered contract holds: every key above came straight from MVola.
+
+**Caveat — this capture is from a cash-out, not a deposit.** The story text anticipated a
+deposit capture. The key set for a deposit is not yet observed and may differ (notably the
+`debitParty`/`creditParty` orientation is reversed). Treat the above as verified for the
+withdraw direction only.
 
 ### GET `/api/mvola/status/[correlationId]` (changed)
 
@@ -413,22 +458,22 @@ closed by writing; both require the operator to actually drive the sandbox walkt
 `docs/architecture/dev-guide.md` § Live Sandbox Walkthrough — Operator Runbook and paste the
 result into the slots that pass has prepared:
 
-- **Callback payload field names — still unverified.** No live MVola webhook delivery has
-  been captured in this repo. It is still unknown whether the callback uses
-  `status`/`objectReference` (as the status response does) or
-  `transactionStatus`/`transactionReference` (as the current code and `_shared.md` assume).
-  `parseMvolaStatus()` accepts both, so this does not block correctness — only the removal
-  of the redundant fallback is blocked on it. An empty, clearly-labelled capture slot now
-  exists at [\_shared.md § Shared message formats](../../_shared.md#shared-message-formats);
-  it must be filled from a real `PUT /api/mvola/callback` delivery, observed via the ngrok
-  inspector, before this item can close.
-- **Details response shape — still indicative.** The `mvola` object in the details response
-  above is forwarded verbatim; its fields are drawn from the operation's purpose, not from a
-  captured 200. The details call was rejected during an earlier verification attempt because
-  no settled transaction reference existed to call it with (that attempt is undated in this
-  repo — do not infer a date for it). An empty capture slot now exists
-  directly below the [details API response](#get-apimvolatransactiontransactionreference-new)
-  above; it must be filled from a real successful call before this item can close.
+- **Callback payload field names — RESOLVED.** A real `PUT /api/mvola/callback` delivery was
+  captured via the ngrok inspector during the live walkthrough. MVola sends
+  **`transactionStatus` / `transactionReference`** — the spelling the code already assumed.
+  Recorded at [\_shared.md § Shared message formats](../../_shared.md#shared-message-formats).
+  **The `parseMvolaStatus()` fallback stays for now**: only one delivery, one status value
+  (`completed`), one direction (cash-out) has been observed, and the *status* endpoint
+  genuinely does use the other spelling. Retire the fallback only after a failed-transaction
+  callback and a deposit callback confirm the same names.
+- **Details response shape — RESOLVED for the withdraw direction.** A real successful
+  `GET /api/mvola/transaction/{reference}` call against a settled sandbox cash-out was
+  captured; the observed key set is recorded directly below the
+  [details API response](#get-apimvolatransactiontransactionreference-new) above. It revealed
+  two things the indicative shape did not show: a second timestamp (`creationDate`, distinct
+  from `requestDate`) and `originalTransactionResult` / `originalTransactionResultDesc` in
+  `metadata`. **Still open for deposits** — the capture is from a cash-out, and the
+  `debitParty`/`creditParty` orientation differs by direction.
 
 **Additional finding from this pass (not part of either Open item above, flagged for
 whoever picks this up next):** `grep -rn "MVOLA_ENV" src/` does **not** currently return only

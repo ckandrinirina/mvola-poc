@@ -305,12 +305,10 @@ grant_type=client_credentials&scope=EXT_INT_MVOLA_SCOPE
 
 ### MVola webhook callback (PUT)
 
-> **Unverified as of this writing.** No live webhook delivery has been captured, so it is
-> not known whether the callback uses the same `status` / `objectReference` names as the
-> status response or the `transactionStatus` / `transactionReference` names shown below.
-> `parseMvolaStatus()` accepts either, so this does not block correctness — only the
-> retirement of the redundant fallback is blocked on it. Story 09-14 exists to capture one
-> real delivery and record the observed shape in the slot immediately below.
+> **VERIFIED against a live sandbox delivery.** A real `PUT /api/mvola/callback` was captured
+> during story 09-14's walkthrough: MVola sends **`transactionStatus` / `transactionReference`**,
+> *not* `status` / `objectReference`. The assumption the code was written against was correct.
+> See the observed capture in the slot immediately below.
 
 ```json
 {
@@ -329,17 +327,39 @@ grant_type=client_credentials&scope=EXT_INT_MVOLA_SCOPE
 
 **Observed callback field names (live capture):**
 
-```
-PASTE THE OBSERVED FIELD NAMES HERE — DO NOT FILL IN BY HAND.
-Captured via the ngrok inspector (http://localhost:4040) during the docs/architecture/
-dev-guide.md "Live Sandbox Walkthrough" runbook (story 09-14). Record only field *names*
-and status *values* observed on a real PUT /api/mvola/callback delivery — never paste an
-MSISDN or other personal data from the payload here.
+Captured via the ngrok inspector (`http://localhost:4040`) from a real
+`PUT /api/mvola/callback` delivery on a settled sandbox cash-out. Field names and status
+values are recorded verbatim; MSISDN and amount values are redacted per this document's
+own rule.
+
+```json
+{
+  "transactionStatus": "completed",
+  "serverCorrelationId": "<uuid>",
+  "transactionReference": "<numeric string, e.g. 7-digit>",
+  "requestDate": "<ISO-8601 with milliseconds and Z>",
+  "debitParty":  [{ "key": "msisdn", "value": "<redacted>" }],
+  "creditParty": [{ "key": "msisdn", "value": "<redacted>" }],
+  "fees":        [{ "feeAmount": "<redacted>" }],
+  "metadata":    [{ "key": "XCorrelationId", "value": "<uuid>" }]
+}
 ```
 
-This block remains empty until story 09-14's live run captures a real delivery. Once filled
-in, retire whichever of `status`/`objectReference` or `transactionStatus`/`transactionReference`
-the observed payload does not use, both here and in `parseMvolaStatus()`.
+**Observed facts, and what they settle:**
+
+- The callback uses **`transactionStatus`** and **`transactionReference`** — the same spelling
+  the code already assumed. The `status` / `objectReference` alternative does **not** appear.
+- `transactionStatus` carried the value `completed` on a successful settlement.
+- There is **no `amount` or `currency` field at the top level** — unlike the shape shown above
+  for orientation. The amount is not echoed in the callback at all.
+- `metadata` carries an `XCorrelationId` that is **distinct** from `serverCorrelationId`.
+  Do not treat them as interchangeable.
+
+**Do not retire `parseMvolaStatus()`'s fallback on the strength of this alone.** One delivery,
+one status value (`completed`), one operation (cash-out). The `status`/`objectReference`
+spelling is what MVola's *status* endpoint returns, so the two shapes genuinely differ across
+endpoints — the fallback is doing real work. Retire it only after a failed-transaction callback
+and a deposit callback have also been observed to use `transactionStatus`.
 
 ## Conventions
 

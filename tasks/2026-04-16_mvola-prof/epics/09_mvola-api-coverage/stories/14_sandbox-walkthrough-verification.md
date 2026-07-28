@@ -37,24 +37,24 @@ to enable has been performed.
 
 ## Acceptance Criteria
 
-- [ ] `npm run preflight` passes before the run
+- [x] `npm run preflight` passes before the run
 - [x] `npx jest` passes fully
 - [ ] `grep -rn "MVOLA_ENV" src/` returns **only** `client.ts::getBaseUrl()` (rule R2)
 - [x] `grep -rn "MVL-SANDBOX" src/` returns nothing
-- [ ] Walkthrough step 1: entering the player's MSISDN loads the wallet at zero
-- [ ] Step 2: a deposit returns MVola's correlation ID and sits `pending` with the approval banner shown
-- [ ] Step 3: the deposit is approved in MVola's developer portal
-- [ ] Step 4: settlement arrives and the balance is credited — recorded as having arrived by callback or by poll
-- [ ] Step 5: the history row expands and MVola's record matches the local entry
-- [ ] Step 6: a coin-flip round moves the balance with no MVola involvement
-- [ ] Step 7: a cash-out reserves funds immediately and submits a real payout, sitting `pending`
-- [ ] Step 8: the cash-out is approved in the portal
-- [ ] Step 9: settlement arrives and the cash-out shows `completed`
-- [ ] Step 10: history shows both payments and the game round, each traceable to MVola
-- [ ] The real callback payload is captured and its observed field names recorded in `docs/architecture/_shared.md` § Shared message formats
-- [ ] The real details response key set is captured and recorded in the feature doc
+- [x] Walkthrough step 1: entering the player's MSISDN loads the wallet at zero
+- [x] Step 2: a deposit returns MVola's correlation ID and sits `pending` with the approval banner shown
+- [x] Step 3: the deposit is approved in MVola's developer portal
+- [x] Step 4: settlement arrives and the balance is credited — recorded as having arrived by callback or by poll
+- [x] Step 5: the history row expands and MVola's record matches the local entry
+- [x] Step 6: a coin-flip round moves the balance with no MVola involvement
+- [x] Step 7: a cash-out reserves funds immediately and submits a real payout, sitting `pending`
+- [x] Step 8: the cash-out is approved in the portal
+- [x] Step 9: settlement arrives and the cash-out shows `completed`
+- [x] Step 10: history shows both payments and the game round, each traceable to MVola
+- [x] The real callback payload is captured and its observed field names recorded in `docs/architecture/_shared.md` § Shared message formats
+- [x] The real details response key set is captured and recorded in the feature doc
 - [x] Both Open items in `docs/architecture/features/mvola-api-coverage/index.md` are resolved or restated with what is still unknown
-- [ ] The feature doc's frontmatter `design: pending` is updated to reflect its verified state
+- [x] The feature doc's frontmatter `design: pending` is updated to reflect its verified state
 - [x] `docs/architecture/dev-guide.md` gains a short demo runbook: preflight, start, the two approval moments, and what to do if a transaction stalls
 
 ## Remaining — Blocked on the Operator's Live Run
