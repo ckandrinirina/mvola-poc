@@ -65,12 +65,17 @@ export function PendingApprovalBanner({
   pollTimeoutMs,
   timedOut,
 }: PendingApprovalBannerProps) {
-  const [now, setNow] = useState(() => Date.now());
+  // Seed with `startedAt` itself (elapsed = 0), not `Date.now()` — the two can differ
+  // between a server render and the client's first paint, and the client's own clock
+  // is only trustworthy once mounted anyway. The mount effect below reconciles to the
+  // real elapsed time immediately, then keeps ticking.
+  const [now, setNow] = useState(() => startedAt ?? Date.now());
 
   // Tick once a second so elapsed/remaining stay live. No timer is started (and none
   // needs clearing) when there is nothing pending to show.
   useEffect(() => {
     if (startedAt == null) return;
+    setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), TICK_MS);
     return () => clearInterval(id);
   }, [startedAt]);
