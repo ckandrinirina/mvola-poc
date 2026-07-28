@@ -1,6 +1,8 @@
 # Implementation Roadmap: mvola-prof
 
 > **2026-04-20 update:** Phases 1–4 (Epics 01–04) are DONE. Phases 5–8 (Epics 05–08) below add the wallet / deposit / coin-flip / cash-out-with-wallet feature.
+>
+> **2026-07-28 update:** Phases 1–8 (Epics 01–08) are DONE — 31/31 stories. Phase 9 (Epic 09) below closes the gap between what the MVola integration *can* do and what it *demonstrably does*: it removes the sandbox short-circuits so every demonstrated payment is a real MVola transaction, adds the fourth published operation, and corrects a field-name mismatch that makes MVola's status reply unreadable outside the sandbox.
 
 ## Dependency Graph
 
@@ -73,6 +75,41 @@
 │     │                                           │
 │     ▼                                           │
 │   08-07 page.tsx + layout.tsx composition       │
+└─────────────────────────────────────────────────┘
+                     │
+                     ▼
+┌──────────────── NEW (2026-07-28) ───────────────┐
+│ Epic 09: MVola API Coverage & Demo Credibility  │
+│                                                 │
+│   09-01 repair CoinFlipGame tests  ← FIRST      │
+│     │     (green baseline before anything moves)│
+│     │                                           │
+│     ├─▶ 09-02 status.ts (parseMvolaStatus)      │
+│     │     ├─▶ 09-03 status/route (un-shortcut)  │
+│     │     └─▶ 09-04 callback/route (unified)    │
+│     │                                           │
+│     ├─▶ 09-05 withdraw/route (real payout)      │
+│     │                                           │
+│     ├─▶ 09-06 reference retention + lookup ─┐   │
+│     ├─▶ 09-07 getTransactionDetails ────────┤   │
+│     │                                       ▼   │
+│     │                        09-08 details route│
+│     │                                       │   │
+│     ├─▶ 09-09 polling.ts + config route     │   │
+│     │     │                                 │   │
+│     │     ▼                                 │   │
+│     │   09-10 PendingApprovalBanner ──┬─────┤   │
+│     │                                 │     │   │
+│     │              09-11 form wiring ◀┘     │   │
+│     │              (also needs 09-05)       │   │
+│     │                                       ▼   │
+│     │              09-12 history expandable row │
+│     │                                           │
+│     └─▶ 09-13 preflight.mjs                     │
+│                        │                        │
+│                        ▼                        │
+│   09-14 end-to-end sandbox walkthrough  ← LAST  │
+│         (needs 03,04,05,11,12,13)               │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -165,6 +202,40 @@ Phases 6 and 7 can run mostly in parallel after Phase 5 completes.
 
 ---
 
+### Phase 9: MVola API Coverage & Demo Credibility (NEW — 2026-07-28)
+**Goal:** All four published MVola operations exercised for real, in both payment directions, through both settlement routes — with nothing a viewer watches produced by a local timer.
+
+29. **Story 09-01** — Repair the `CoinFlipGame` test suite (S) — **first and alone**
+    - 21 checks fail because the component was refactored to `MsisdnContext` and this test file was not updated. A failing suite masks any regression the rest of this epic introduces, so the baseline is made green before anything else moves.
+
+Then five tracks open in parallel:
+
+30. **Story 09-02** — `parseMvolaStatus()` + type corrections (M) — needs 09-01
+    - Closes the `status` vs `transactionStatus` mismatch. A latent production defect the sandbox shortcut conceals.
+31. **Story 09-03** — Status route: remove the sandbox short-circuit (M) — needs 09-02
+32. **Story 09-04** — Callback route: unified interpretation (S) — needs 09-02
+33. **Story 09-05** — Withdraw route: real payout, no auto-complete timer (M) — needs 09-01
+    - Independent of the interpretation track; can run alongside 09-02…04.
+34. **Story 09-06** — Settled-reference retention + lookup (S) — needs 09-01
+35. **Story 09-07** — `getTransactionDetails()`, the fourth operation (S) — needs 09-01
+36. **Story 09-08** — Details route `GET /api/mvola/transaction/[ref]` (M) — needs 09-06 + 09-07
+37. **Story 09-09** — Polling policy + client config exposure (M) — needs 09-01
+38. **Story 09-10** — `PendingApprovalBanner` (M) — needs 09-09
+39. **Story 09-13** — `scripts/preflight.mjs` (M) — needs 09-01
+    - Fully independent; can be built at any point after the baseline is green.
+
+Then the two integration stories converge:
+
+40. **Story 09-11** — Wire knobs + banner into `DepositForm` / `CashOutForm` (M) — needs 09-05 + 09-10
+41. **Story 09-12** — `TransactionHistory` expandable settled row (L) — needs 09-08 + 09-10
+
+And finally:
+
+42. **Story 09-14** — End-to-end sandbox walkthrough & payload capture (M) — needs 09-03, 09-04, 09-05, 09-11, 09-12, 09-13
+    - The epic is not finished when the code compiles; it is finished when the walkthrough it exists to enable has been performed. Also closes the two Open items that can only be closed by observation.
+
+---
+
 ## Parallelization Opportunities
 
 ### Phases 1–4 (DONE)
@@ -187,6 +258,20 @@ Phases 6 and 7 can run mostly in parallel after Phase 5 completes.
 | 08-01 + 08-03 + 08-04 + 08-05 + 08-06 | Yes, with their blockers cleared | Once their blockers are in, all five can be built independently |
 | 08-07 | Must be last | Integrates every other Epic 08 story |
 
+### Phase 9 (NEW — 2026-07-28)
+
+| Stories | Can run in parallel | Reason |
+|---------|---------------------|--------|
+| 09-01 + anything | **No** | 09-01 must land alone. Every later story changes MVola call paths, and a red suite makes it impossible to tell a regression from the pre-existing 21 failures |
+| 09-02 + 09-05 + 09-06 + 09-07 + 09-09 + 09-13 | Yes — all 6 | Five independent tracks once the baseline is green; they touch disjoint files |
+| 09-03 + 09-04 | Yes | Both consume `parseMvolaStatus()` but modify different routes |
+| 09-06 + 09-07 | Yes | Store/reconcile vs. HTTP client — no overlap; both feed 09-08 |
+| 09-11 + 09-12 | Yes, once their blockers are in | Different components; both need 09-10 but nothing from each other |
+| 09-13 | Anytime after 09-01 | Touches only `scripts/` and `package.json` |
+| 09-14 | Must be last | Requires the whole epic running against the live sandbox |
+
+**Worktree caution for `/ck-code:parallel-build`:** 09-02 and 09-07 both modify `src/lib/mvola/types.ts`, and 09-03 and 09-04 both consume the module 09-02 creates. Run 09-02 and 09-07 in the same wave only if the merge is checked; otherwise sequence them.
+
 ## Critical Path
 
 ### Phases 1–4 (DONE)
@@ -201,6 +286,13 @@ Phases 6 and 7 can run mostly in parallel after Phase 5 completes.
 05-01 → 05-02 → 06-03 → 08-05 → 08-07
 ```
 (five sequential stories; 05-03/05-04 and 07-01 run in parallel with 05-02; Epic 06/07 mostly in parallel with each other; 08-01…08-06 mostly in parallel, ending at 08-07)
+
+### Phase 9 (NEW)
+
+```
+09-01 → 09-09 → 09-10 → 09-12 → 09-14
+```
+(five sequential stories, S → M → M → L → M. The other four tracks — interpretation 09-02/03/04, withdraw 09-05, details 09-06/07/08, preflight 09-13 — all fit inside this span. 09-08 must land before 09-12 starts, which it comfortably can: 09-06 and 09-07 are both S and unblocked from 09-01.)
 
 ## Risk Areas
 
@@ -224,6 +316,18 @@ Phases 6 and 7 can run mostly in parallel after Phase 5 completes.
 | `WithdrawForm` tests break on refactor | Medium — CI red | 08-05 migrates tests; accept `playerMsisdn` as alias during rollout (06-03) |
 | In-memory state lost on server restart mid-demo | Low — by design for PoC | Documented in `state-management.md`; dev-guide troubleshooting entry points to restart as root cause |
 
+### Phase 9 (new risks)
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| The payout direction is rejected again after the shim is removed | High — cash-out breaks entirely | A live payout to this partner account was accepted on 2026-07-28. If it recurs, capture MVola's error code before restoring any workaround — the previous one was built on an unverified assumption and hid the problem for months |
+| Callback payload field names differ from the status response | Medium — settlement never applies | `parseMvolaStatus()` accepts both spellings on both paths (09-02). Story 09-14 captures a real delivery so the fallback can later be retired |
+| Details response shape differs from what the feature doc assumes | Low — details panel renders oddly | 09-08 forwards the object verbatim and 09-12 renders keys generically, so an unexpected shape displays rather than crashes |
+| Poll ceiling too short for a live manual approval | Medium — a working demo reports a timeout while the presenter is still clicking | 120 s default (09-09); reaching the ceiling reports "still pending", never failure; 09-14 records real approval timings and raises the default if needed |
+| Callback tunnel expired at demo time | High — settlement never arrives, demo stalls | `npm run preflight` (09-13) checks reachability from outside the process before the demo starts |
+| A client-side timeout is mistaken for failure and moves the wallet | High — breaks rule R3 | Explicitly forbidden in 09-10 and 09-11 and asserted in their tests: no `refreshBalance()`, no `failed` status, no error styling on timeout |
+| Presenter uncomfortable performing live approvals | Medium — demo pace suffers | Spec § 11 open question; 09-14 is the rehearsal that answers it, and records the answer in the dev-guide runbook |
+
 ## Milestones
 
 | Milestone | Epics Included | Deliverable |
@@ -236,3 +340,8 @@ Phases 6 and 7 can run mostly in parallel after Phase 5 completes.
 | Full Money Lifecycle | Epic 06 | Deposit + wallet-aware cash-out + idempotent reconciliation, testable via curl |
 | Game + Query API | Epic 07 | Coin-flip round routes + balance + history routes, testable via curl |
 | Realistic Demo (v2) | Epic 08 | Tabbed UI with full deposit → play → cash-out → history round-trip in the browser |
+| Green Baseline | Story 09-01 | 332/332 checks passing — a suite that can prove the rest of Epic 09 broke nothing |
+| Real Money Path | Stories 09-02…09-05 | Every payment and every status check reaches MVola in all environments; no `MVOLA_ENV` branch outside `getBaseUrl()` |
+| Complete API Surface | Stories 09-06…09-08 | All four published MVola operations exercised, with Transaction Details retrievable beside the local record |
+| Credible Demo (v3) | Stories 09-09…09-13 | Approval step visible, timings configurable, history rows openable, `npm run preflight` green before an audience |
+| Verified End-to-End | Story 09-14 | The full walkthrough performed live against the sandbox, with the real callback and details payload shapes recorded |

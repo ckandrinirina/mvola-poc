@@ -36,6 +36,8 @@
 │    POST /api/mvola/deposit     deposit/route.ts              │
 │    POST /api/mvola/withdraw    withdraw/route.ts             │
 │    GET  /api/mvola/status/:id  status/route.ts               │
+│    GET  /api/mvola/transaction/:ref                          │
+│                                transaction/route.ts          │
 │    PUT  /api/mvola/callback    callback/route.ts             │
 │                                                              │
 │  Internal routes (no MVola call):                            │
@@ -69,6 +71,8 @@
 │        direction is determined by debitParty/creditParty)    │
 │  GET  /mvola/mm/transactions/type/merchantpay/1.0.0/         │
 │       status/{serverCorrelationId}                           │
+│  GET  /mvola/mm/transactions/type/merchantpay/1.0.0/         │
+│       {transactionReference}    (details of a settled tx)    │
 └──────────────────────────────────────────────────────────────┘
           │ PUT callback (webhook)
           ▼
@@ -112,7 +116,8 @@ Browser                Next.js Server           MVola API
    │────────────────────────▶│                       │
    │                        │  GET status/:id        │
    │                        │───────────────────────▶│
-   │                        │  { transactionStatus } │
+   │                        │  { status,             │
+   │                        │    objectReference }   │
    │                        │◀───────────────────────│
    │  { status: pending }   │                       │
    │◀────────────────────────│                       │
@@ -135,6 +140,18 @@ Browser                Next.js Server           MVola API
 All calls go to:
 - **Sandbox:** `https://devapi.mvola.mg`
 - **Production:** `https://api.mvola.mg`
+
+### Published surface
+
+MVola publishes two APIs and four operations. This is the complete surface — full coverage
+is an achievable goal for this project, not an aspiration.
+
+| API | Operation | Purpose |
+|---|---|---|
+| Authentication | `POST /token` | Bearer token, one-hour lifetime |
+| Merchant Pay | `POST /…/merchantpay/1.0.0/` | Moves money in either direction |
+| Merchant Pay | `GET /…/status/{serverCorrelationId}` | Progress of a submitted transaction |
+| Merchant Pay | `GET /…/{transactionReference}` | Full record of a settled transaction |
 
 ### Common request headers
 
@@ -214,11 +231,27 @@ grant_type=client_credentials&scope=EXT_INT_MVOLA_SCOPE
 **Response (200):**
 ```json
 {
-  "transactionStatus": "pending | completed | failed",
+  "status": "pending | completed | failed",
   "serverCorrelationId": "550e8400-e29b-41d4-a716-446655440000",
-  "transactionReference": "MVL-2026-04-16-001"
+  "objectReference": "MVL-2026-04-16-001"
 }
 ```
+
+> **Corrected 2026-07-28.** This response was previously documented — and is still read in
+> code — as `transactionStatus` / `transactionReference`. Live verification against the
+> sandbox established the real field names are `status` and `objectReference`. Reading the
+> old names finds nothing, which in production would leave every transaction with no status
+> at all. Both spellings are accepted via `parseMvolaStatus()`; see
+> [mvola-api-coverage](features/mvola-api-coverage/index.md#srclibmvolastatusts--shared-status-reader-new).
+
+### GET `/mvola/mm/transactions/type/merchantpay/1.0.0/{transactionReference}` — Transaction details
+
+Returns MVola's authoritative record of a **settled** transaction: amounts, both parties,
+timestamps, and final state, as MVola holds them. Requires a reference issued at
+settlement — it cannot be called for a transaction that is still pending.
+
+> **Header note:** per `docs/mvola-reference/merchant-pay-openapi.json`, this operation does
+> not require the `partnerName` header that the initiate and status operations do.
 
 ### HTTP status codes (MVola)
 
@@ -264,13 +297,19 @@ grant_type=client_credentials&scope=EXT_INT_MVOLA_SCOPE
 ### Transaction status response
 ```json
 {
-  "transactionStatus": "pending | completed | failed",
+  "status": "pending | completed | failed",
   "serverCorrelationId": "550e8400-e29b-41d4-a716-446655440000",
-  "transactionReference": "MVL-2026-04-16-001"
+  "objectReference": "MVL-2026-04-16-001"
 }
 ```
 
 ### MVola webhook callback (PUT)
+
+> **Unverified.** No live webhook delivery has been captured, so it is not known whether the
+> callback uses the same `status` / `objectReference` names as the status response or the
+> `transactionStatus` / `transactionReference` names shown below. `parseMvolaStatus()`
+> accepts either. Record the observed shape here after the first real delivery.
+
 ```json
 {
   "transactionStatus": "completed",

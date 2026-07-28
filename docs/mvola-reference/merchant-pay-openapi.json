@@ -1,0 +1,470 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "MVOLA-Merchant-Pay-API",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "https://pre-api.mvola.mg/mvola/mm/transactions/type/merchantpay/1.0.0"
+        },
+        {
+            "url": "http://pre-api.mvola.mg/mvola/mm/transactions/type/merchantpay/1.0.0"
+        }
+    ],
+    "security": [
+        {
+            "default": []
+        }
+    ],
+    "paths": {
+        "/{transactionReference}": {
+            "get": {
+                "description": "Transaction details",
+                "parameters": [
+                    {
+                        "name": "transactionReference",
+                        "in": "path",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "string"
+                        }
+                    },
+                    {
+                        "name": "Version",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "CellIdA",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "GeoLocationA",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Accept",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Accept-Charset",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-CorrelationID",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "UserAccountIdentifier",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Cache-Control",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok"
+                    }
+                },
+                "security": [
+                    {
+                        "default": [
+                            "EXT_INT_MVOLA_SCOPE"
+                        ]
+                    }
+                ],
+                "x-auth-type": "Application & Application User",
+                "x-throttling-tier": "Unlimited"
+            }
+        },
+        "/status/{serverCorrelationId}": {
+            "get": {
+                "description": "Transaction status",
+                "parameters": [
+                    {
+                        "name": "serverCorrelationId",
+                        "in": "path",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "string"
+                        }
+                    },
+                    {
+                        "name": "Version",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "CellIdA",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "GeoLocationA",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Accept",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Accept-Charset",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-CorrelationID",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "UserAccountIdentifier",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "partnerName",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Cache-Control",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok"
+                    }
+                },
+                "security": [
+                    {
+                        "default": [
+                            "EXT_INT_MVOLA_SCOPE"
+                        ]
+                    }
+                ],
+                "x-auth-type": "Application & Application User",
+                "x-throttling-tier": "Unlimited"
+            }
+        },
+        "/": {
+            "post": {
+                "description": "Merchant pay",
+                "parameters": [
+                    {
+                        "name": "Version",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "CellIdA",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "GeoLocationA",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "CellIdB",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "GeoLocationB",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Accept",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Accept-Charset",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-CorrelationID",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-Callback-URL",
+                        "in": "header",
+                        "required": false,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Cache-Control",
+                        "in": "header",
+                        "required": true,
+                        "style": "simple",
+                        "explode": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "amount": {
+                                        "type": "string"
+                                    },
+                                    "currency": {
+                                        "type": "string"
+                                    },
+                                    "descriptionText": {
+                                        "type": "string"
+                                    },
+                                    "requestingOrganisationTransactionReference": {
+                                        "type": "string"
+                                    },
+                                    "requestDate": {
+                                        "type": "string"
+                                    },
+                                    "originalTransactionReference": {
+                                        "type": "string"
+                                    },
+                                    "debitParty": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "key": {
+                                                    "type": "string"
+                                                },
+                                                "value": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "creditParty": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "key": {
+                                                    "type": "string"
+                                                },
+                                                "value": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "metadata": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "key": {
+                                                    "type": "string"
+                                                },
+                                                "value": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "ok"
+                    },
+                    "202": {
+                        "description": "pending"
+                    }
+                },
+                "security": [
+                    {
+                        "default": [
+                            "EXT_INT_MVOLA_SCOPE"
+                        ]
+                    }
+                ],
+                "x-auth-type": "Application & Application User",
+                "x-throttling-tier": "Unlimited"
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "default": {
+                "type": "oauth2",
+                "flows": {
+                    "implicit": {
+                        "authorizationUrl": "https://pre-api.mvola.mg/authorize",
+                        "scopes": {
+                            "EXT_INT_MVOLA_SCOPE": "Both External and internal Mvola scope"
+                        },
+                        "x-scopes-bindings": {
+                            "EXT_INT_MVOLA_SCOPE": "ExtMvolaRole,IntMvolaRole"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

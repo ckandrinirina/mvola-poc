@@ -12,6 +12,8 @@
 - Keep all MVola API credentials server-side (Next.js API routes) — never exposed to the browser
 - Provide a single-page demo UI with tabbed sections (**Deposit / Play / Cash-out / History**) showing the full round-trip end-to-end
 - Work against the MVola sandbox environment so no real money is involved during development
+- **Exercise every operation MVola publishes** — all four across its two APIs — so the claim is complete coverage, not partial
+- **Route every demonstrated payment through MVola for real**, so nothing a viewer watches is produced by a local timer
 
 ## Target Users
 
@@ -26,6 +28,8 @@
 - OAuth tokens expire after 3600 seconds and must be refreshed automatically
 - Wallet state is keyed by MSISDN and survives only within a single server process — restart wipes the wallet and history
 - Every wallet mutation must be **idempotent** — the status poll and the webhook may both fire for the same transaction
+- Sandbox transactions settle only after a **manual approval** in MVola's developer portal — the demo depends on a live human step and is not fully self-driving
+- No behaviour may branch on `MVOLA_ENV` except base-URL selection; sandbox and production follow the same path
 
 ## Scope
 
@@ -37,6 +41,7 @@
 - **In-memory wallet store** keyed by player MSISDN with balance, transactions, and game history
 - **Coin-flip game simulation** — bet from wallet, 50/50 outcome, win doubles the bet / lose forfeits it
 - **Transaction + game history** endpoint per MSISDN
+- **Transaction details** — MVola's authoritative record of a settled transaction, shown beside the local entry
 - Single-page React UI with tabs: Deposit / Play / Cash-out / History
 
 ### Out of Scope / Future
@@ -46,3 +51,4 @@
 - Full production hardening (rate limiting, retry queues, audit logs, RNG certification, house edge tuning)
 - Player authentication / session management
 - Real-game integration (leaderboards, game lobbies, matchmaking)
+- The production go-live submission itself, including MVola's branding requirements and its web security checklist — both are prerequisites for going live, neither is needed to demonstrate the integration

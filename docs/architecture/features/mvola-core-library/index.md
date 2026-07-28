@@ -47,6 +47,12 @@ owned by [state-store](../state-store/index.md).
 - **Purpose:** Single source of truth for all MVola payload shapes **and** internal domain types
 - **Responsibilities:** Define interfaces for:
   - MVola shapes (owned here): `MVolaToken`, `WithdrawalRequest`, `TransactionResponse`, `CallbackPayload`, `TransactionStatus`, `MVolaParty`
+  - ⚠️ **Correction (2026-07-28).** `TransactionStatusResponse` as specified here uses the
+    wrong field names — MVola's status reply carries `status` and `objectReference`, not
+    `transactionStatus` and `transactionReference`. The corrected shape, the
+    `getTransactionDetails()` method for MVola's fourth operation, and the shared
+    `parseMvolaStatus()` reader are specified in
+    [mvola-api-coverage](../mvola-api-coverage/index.md).
   - Domain shapes (owned by [state-store](../state-store/index.md), same file): `WalletState`, `TransactionRecord`, `TransactionDirection`, `GameSession`, `GameChoice`, `GameResult`, `CoinFlipOutcome`
 - **Depends on:** nothing
 

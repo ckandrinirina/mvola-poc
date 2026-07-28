@@ -47,6 +47,8 @@
 - **Auth:** OAuth 2.0 Client Credentials flow
 - **Sandbox base URL:** `https://devapi.mvola.mg`
 - **Production base URL:** `https://api.mvola.mg`
+- **Coverage:** all four published operations — token, initiate, status, details. See
+  [\_shared.md → Published surface](_shared.md#published-surface)
 
 ### Serialization
 - **Format:** JSON (`Content-Type: application/json`) for transaction calls
@@ -71,4 +73,5 @@
 |------|---------|
 | ESLint | Code linting |
 | Prettier | Code formatting |
-| ngrok (optional) | Expose local server for MVola webhook callbacks during dev |
+| Jest | Unit and route tests |
+| ngrok (**required**, reserved domain) | Receive MVola webhook callbacks. Not optional — settlement notifications are what the demo exists to show, and a reserved static domain keeps `MVOLA_CALLBACK_URL` valid between runs |

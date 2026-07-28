@@ -23,6 +23,9 @@ mvola-prof/
 │   │       │   ├── status/
 │   │       │   │   └── [correlationId]/
 │   │       │   │       └── route.ts    # GET — poll transaction status
+│   │       │   ├── transaction/
+│   │       │   │   └── [transactionReference]/
+│   │       │   │       └── route.ts    # GET — MVola's record of a settled tx + the local one
 │   │       │   └── callback/
 │   │       │       └── route.ts        # PUT — receive MVola webhook
 │   │       ├── wallet/                 # Internal wallet queries (no MVola call)
@@ -36,8 +39,12 @@ mvola-prof/
 │   │               └── route.ts        # POST — play one coin-flip round
 │   ├── lib/
 │   │   ├── mvola/                      # MVola API client (server-only)
-│   │   │   ├── client.ts               # HTTP calls (initiateWithdrawal, initiateDeposit, getTransactionStatus)
+│   │   │   ├── client.ts               # HTTP calls (initiateWithdrawal, initiateDeposit,
+│   │   │   │                           #   getTransactionStatus, getTransactionDetails)
 │   │   │   ├── auth.ts                 # Token fetch + in-memory cache
+│   │   │   ├── reconcile.ts            # Idempotent wallet reconciliation
+│   │   │   ├── status.ts               # parseMvolaStatus() — one reading for poll + callback
+│   │   │   ├── polling.ts              # Poll interval / ceiling from env
 │   │   │   └── types.ts                # TypeScript types for MVola payloads + domain types
 │   │   ├── store/                      # In-memory state (server-only)
 │   │   │   ├── wallets.ts              # Map<msisdn, WalletState>
@@ -51,9 +58,14 @@ mvola-prof/
 │       ├── DepositForm.tsx             # Amount form → POST /api/mvola/deposit + polling
 │       ├── CoinFlipGame.tsx            # Bet + heads/tails, result display
 │       ├── CashOutForm.tsx             # Wallet-aware cash-out (refactor of WithdrawForm)
-│       └── TransactionHistory.tsx      # Chronological list of txs + game rounds
+│       ├── PendingApprovalBanner.tsx   # Names the manual approval a pending tx waits on
+│       └── TransactionHistory.tsx      # Chronological list; settled rows expand to MVola's record
+├── scripts/
+│   └── preflight.mjs                   # npm run preflight — env, token, callback reachability
 ├── docs/
 │   ├── API_MerchantPay.pdf             # Original MVola API spec (read-only)
+│   ├── mvola-reference/                # MVola's own guides + merchant-pay-openapi.json
+│   ├── specs/                          # Stakeholder feature specs (read-only input)
 │   └── architecture/                   # This documentation set
 ├── .env.local                          # Secrets — NOT committed
 ├── .env.example                        # Template — committed
@@ -75,7 +87,10 @@ Internal read-only routes for querying the in-memory wallet state — current ba
 Internal routes that simulate game activity. `coinflip/route.ts` validates the player's balance, debits the bet, runs the pure game logic from `src/lib/game/coinflip.ts`, credits winnings, records the round, and returns the new balance.
 
 ### `src/lib/mvola/`
-Reusable MVola client logic. `auth.ts` manages token lifecycle (fetch on first use, return cached token while valid). `client.ts` provides typed functions for both payment directions. `types.ts` holds shared TypeScript interfaces for both MVola payloads and internal domain types (`WalletState`, `TransactionRecord`, `GameSession`).
+Reusable MVola client logic. `auth.ts` manages token lifecycle (fetch on first use, return cached token while valid). `client.ts` provides typed functions for all four MVola operations. `status.ts` holds the single interpretation of MVola's reply that both the polling route and the webhook route apply, so the two paths to settlement cannot disagree. `reconcile.ts` applies the wallet side-effect exactly once. `polling.ts` reads the two timing knobs from the environment. `types.ts` holds shared TypeScript interfaces for both MVola payloads and internal domain types (`WalletState`, `TransactionRecord`, `GameSession`).
+
+### `scripts/`
+Operational scripts run outside the Next.js server. `preflight.mjs` answers "is this demo runnable right now?" — environment completeness, live credentials, and callback reachability — before an audience is watching.
 
 ### `src/lib/store/`
 Module-level `Map` stores that hold wallet balances, transaction records, and game sessions. Mirrors the existing in-memory pattern used by the OAuth token cache in `auth.ts` — survives the process lifetime, resets on server restart. See [state-management.md](state-management.md) for full schemas and invariants.
@@ -94,3 +109,4 @@ Stateless React UI components. The demo page composes them into a tabbed single-
 - All MVola types are defined once in `src/lib/mvola/types.ts`; domain types (`WalletState`, `TransactionRecord`, `GameSession`) live alongside them in the same file
 - Store modules export typed accessors only (`getWallet`, `creditWallet`, `debitWallet`, etc.) — the underlying `Map` is never exposed directly
 - Monetary amounts are **integer Ariary** everywhere in the wallet/game layer; the MVola HTTP layer serialises them as strings at the edge per the MVola API contract
+- `MVOLA_ENV` is read in exactly one place — `client.ts::getBaseUrl()`. No other code branches on the environment; sandbox and production follow the same path

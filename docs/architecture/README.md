@@ -3,7 +3,9 @@
 > Generated from `docs/API_MerchantPay.pdf` (original spec) on 2026-04-16.
 > Extended with the Wallet + Deposit + Coin-Flip Game + Cash-Out feature on 2026-04-20.
 > Reorganized into the ck-code v4 feature-scoped layout on 2026-07-28.
-> The original specification PDF was not modified.
+> Extended with MVola API Coverage & Demo Credibility on 2026-07-28, from
+> `docs/specs/2026-07-28_mvola-api-coverage/pre-spec.md`.
+> Neither original specification was modified.
 
 ## Global documents
 
@@ -34,6 +36,7 @@ One self-contained doc per feature. `<slug>` matches the epic folder slug in
 | [game-and-queries](features/game-and-queries/index.md) | 07 | Coin-flip game logic + route, balance and history query routes |
 | [tabbed-ui](features/tabbed-ui/index.md) | 08 | Tabbed single-page app: header, deposit, play, cash-out, history |
 | [wallet-deposit-game](features/wallet-deposit-game/index.md) | 05–08 | Cross-cutting spec for the deposit / game / cash-out round-trip |
+| [mvola-api-coverage](features/mvola-api-coverage/index.md) | 09 | Full four-operation MVola coverage; removes the sandbox short-circuits so every demonstrated payment is real |
 
 ## Archive
 
@@ -48,6 +51,9 @@ One self-contained doc per feature. `<slug>` matches the epic folder slug in
 
 ## Source
 - **Original spec:** `docs/API_MerchantPay.pdf`
+- **Feature specs:** `docs/specs/2026-07-28_mvola-api-coverage/pre-spec.md`
 - **Generated:** 2026-04-16
-- **Last updated:** 2026-07-28 (migrated to the ck-code v4 feature-scoped doc layout)
-- **Gaps remaining:** None
+- **Last updated:** 2026-07-28 (added the `mvola-api-coverage` feature; corrected the MVola
+  status-response field names in `_shared.md`)
+- **Gaps remaining:** two unverified MVola response shapes — see
+  [mvola-api-coverage → Open items](features/mvola-api-coverage/index.md#open-items)
