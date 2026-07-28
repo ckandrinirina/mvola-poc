@@ -2,7 +2,7 @@
 id: 09-10
 title: `PendingApprovalBanner` Component
 epic: 09
-status: todo
+status: done
 size: M
 blocked_by: [09-09]
 files: [src/components/PendingApprovalBanner.tsx, src/__tests__/components/PendingApprovalBanner.test.tsx]
@@ -31,19 +31,19 @@ cannot imitate — but only if the interface says that is what is happening.
 
 ## Acceptance Criteria
 
-- [ ] `src/components/PendingApprovalBanner.tsx` is a React client component (`"use client"`)
-- [ ] It states plainly what is being waited on: MVola settlement, pending a manual approval in the developer portal
-- [ ] It shows elapsed time, updating at least once per second
-- [ ] It shows the remaining budget, derived from `pollTimeoutMs`
-- [ ] It links to MVola's developer-portal transaction-approvals page, opening in a new tab with `rel="noopener noreferrer"`
-- [ ] On reaching the ceiling it switches to **"still pending — MVola has not settled this yet"**, never "failed" and never an error style
-- [ ] The timed-out state explains that settlement may still arrive by callback, so the wait is not presented as a dead end
-- [ ] Timing values arrive as props or from `GET /api/config/polling` — the component does not hardcode `3000` or `120000`
-- [ ] Its interval is cleared on unmount; no timer survives the component
-- [ ] It renders nothing (or is not mounted) when there is no pending transaction
-- [ ] Styling is consistent with the existing components: Tailwind utilities only, rounded card, amber for waiting rather than red
-- [ ] Tests cover: renders while pending, elapsed time advances under fake timers, ceiling switches to the still-pending wording, the word "failed" never appears, cleanup on unmount, approvals link present
-- [ ] `npx jest` passes fully
+- [x] `src/components/PendingApprovalBanner.tsx` is a React client component (`"use client"`)
+- [x] It states plainly what is being waited on: MVola settlement, pending a manual approval in the developer portal
+- [x] It shows elapsed time, updating at least once per second
+- [x] It shows the remaining budget, derived from `pollTimeoutMs`
+- [x] It links to MVola's developer-portal transaction-approvals page, opening in a new tab with `rel="noopener noreferrer"`
+- [x] On reaching the ceiling it switches to **"still pending — MVola has not settled this yet"**, never "failed" and never an error style
+- [x] The timed-out state explains that settlement may still arrive by callback, so the wait is not presented as a dead end
+- [x] Timing values arrive as props or from `GET /api/config/polling` — the component does not hardcode `3000` or `120000`
+- [x] Its interval is cleared on unmount; no timer survives the component
+- [x] It renders nothing (or is not mounted) when there is no pending transaction
+- [x] Styling is consistent with the existing components: Tailwind utilities only, rounded card, amber for waiting rather than red
+- [x] Tests cover: renders while pending, elapsed time advances under fake timers, ceiling switches to the still-pending wording, the word "failed" never appears, cleanup on unmount, approvals link present
+- [x] `npx jest` passes fully
 
 ## Technical Notes
 
@@ -90,3 +90,37 @@ Use `jest.useFakeTimers()` for the elapsed-time and ceiling tests, and wrap adva
 
 - **Epic:** 09_mvola-api-coverage
 - **Spec reference:** pre-spec § 5.5; feature doc § `PendingApprovalBanner`
+
+## Implementation Summary
+
+`PendingApprovalBanner` is a purely presentational client component: it takes `startedAt`
+(ms epoch or `null`/`undefined`), `pollTimeoutMs`, and an optional caller-controlled
+`timedOut` override as props, and owns no transaction state, no fetch, and no context
+dependency — matching the requirement that stories 09-11/09-12 mount it without it
+reaching into form state.
+
+While `startedAt` is set, it ticks a 1-second clock (`setInterval`, cleared on unmount)
+showing elapsed time and the remaining budget derived from `pollTimeoutMs`, states plainly
+that settlement is waiting on a manual approval in MVola's developer portal, and links to
+it (`target="_blank"`, `rel="noopener noreferrer"`). The developer-portal transaction-
+approvals sub-path is not documented anywhere in the repo (confirmed against
+`docs/mvola-reference/01-developer-guide.pdf` and `docs/mvola-reference/README.md`), so the
+link points at the confirmed portal root `https://developer.mvola.mg/devportal/` and names
+"Transaction Approvals" in the link text instead, per the story's guidance to avoid a link
+that 404s. On reaching `pollTimeoutMs` (or when `timedOut` is passed), the banner switches
+to "Still pending — MVola has not settled this yet" and explains settlement may still
+arrive by callback — the word "failed" never appears and the styling stays amber
+throughout, never red. `startedAt == null` renders `null`.
+
+One refactor beyond the initial pass: the elapsed clock is seeded from `startedAt` itself
+(elapsed = 0) rather than `Date.now()`, and reconciled to the real clock in the mount
+effect — avoiding a server/client render mismatch on first paint, consistent with this
+project's established caution around environment-dependent initial render state.
+
+**Files Touched:**
+- CREATED: `src/components/PendingApprovalBanner.tsx`
+- CREATED: `src/__tests__/components/PendingApprovalBanner.test.tsx`
+
+**Tests:** 10 new tests (461/461 project-wide passing). `npx tsc --noEmit` clean.
+**QA:** PASS — all acceptance criteria verified against source with file:line citations;
+no code-quality issues found.
