@@ -1,8 +1,18 @@
+---
+id: 07-04
+title: History Query Route — `GET /api/wallet/[msisdn]/history`
+epic: 07
+status: done
+size: M
+blocked_by: [05-03, 05-04]
+files: [src/app/api/wallet/[msisdn]/history/route.ts, src/app/api/wallet/[msisdn]/history/__tests__/route.test.ts]
+issue:
+prior_status:
+---
+
 # Story 07-04: History Query Route — `GET /api/wallet/[msisdn]/history`
 
 > **Epic:** 07 — Game & Wallet Queries
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

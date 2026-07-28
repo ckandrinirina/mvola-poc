@@ -1,3 +1,10 @@
+---
+epic: 06
+slug: wallet-aware-mvola
+title: Wallet-Aware MVola Flows
+description: Bring the MVola integration up to the feature's real requirements — add the **deposit** direction, retrofit the existing **cash-out** route to reserve wallet funds at request time, and make the **status** and **callback** routes reconcile wallet balances idempotently.
+---
+
 # Epic 06: Wallet-Aware MVola Flows
 
 ## Description
@@ -33,16 +40,6 @@ After this epic lands, a developer can exercise the entire money-movement lifecy
 
 - **Depends on:** Epic 05 (wallet, transaction stores + domain types)
 - **Blocks:** Epic 08 (`DepositForm`, `CashOutForm` call into these routes)
-
-## Stories
-
-| # | Story | Size | Status |
-|---|-------|------|--------|
-| 01 | Deposit HTTP client method — `client.ts::initiateDeposit` | M | TODO |
-| 02 | Deposit route — `POST /api/mvola/deposit` | M | TODO |
-| 03 | Wallet-aware cash-out refactor — `POST /api/mvola/withdraw` | L | DONE |
-| 04 | Reconciliation in status route — `GET /api/mvola/status/:id` | L | TODO |
-| 05 | Reconciliation in callback route — `PUT /api/mvola/callback` | M | TODO |
 
 ## Acceptance Criteria
 

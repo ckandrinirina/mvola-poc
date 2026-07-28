@@ -1,8 +1,18 @@
+---
+id: 03-02
+title: Withdraw Route — `POST /api/mvola/withdraw`
+epic: 03
+status: done
+size: M
+blocked_by: [02-02, 02-03]
+files: [src/app/api/mvola/withdraw/route.ts]
+issue:
+prior_status:
+---
+
 # Story 03-02: Withdraw Route — `POST /api/mvola/withdraw`
 
 > **Epic:** 03 — API Routes
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

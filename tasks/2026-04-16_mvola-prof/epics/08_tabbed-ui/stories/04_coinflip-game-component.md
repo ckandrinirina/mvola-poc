@@ -1,8 +1,18 @@
+---
+id: 08-04
+title: `CoinFlipGame` Component — Bet + Play + Result
+epic: 08
+status: done
+size: M
+blocked_by: [07-02, 08-01]
+files: [src/components/CoinFlipGame.tsx, src/components/__tests__/CoinFlipGame.test.tsx]
+issue:
+prior_status:
+---
+
 # Story 08-04: `CoinFlipGame` Component — Bet + Play + Result
 
 > **Epic:** 08 — Tabbed Demo UI
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

@@ -1,8 +1,18 @@
+---
+id: 01-02
+title: Environment Config — `.env.example` and `.gitignore`
+epic: 01
+status: done
+size: S
+blocked_by: [01-01]
+files: [.env.example, .gitignore]
+issue:
+prior_status:
+---
+
 # Story 01-02: Environment Config — `.env.example` and `.gitignore`
 
 > **Epic:** 01 — Project Foundation
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

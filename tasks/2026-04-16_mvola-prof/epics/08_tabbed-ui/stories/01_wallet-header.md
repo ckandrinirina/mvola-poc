@@ -1,8 +1,18 @@
+---
+id: 08-01
+title: `WalletHeader` Component — MSISDN Input + Balance Polling
+epic: 08
+status: done
+size: M
+blocked_by: [07-03]
+files: [src/components/WalletHeader.tsx, src/components/__tests__/WalletHeader.test.tsx]
+issue:
+prior_status:
+---
+
 # Story 08-01: `WalletHeader` Component — MSISDN Input + Balance Polling
 
 > **Epic:** 08 — Tabbed Demo UI
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

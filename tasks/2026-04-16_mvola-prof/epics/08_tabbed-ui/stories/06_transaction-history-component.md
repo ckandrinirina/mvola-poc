@@ -1,8 +1,18 @@
+---
+id: 08-06
+title: `TransactionHistory` Component — Merged History List
+epic: 08
+status: done
+size: M
+blocked_by: [07-04, 08-01]
+files: [src/components/TransactionHistory.tsx, src/components/__tests__/TransactionHistory.test.tsx]
+issue:
+prior_status:
+---
+
 # Story 08-06: `TransactionHistory` Component — Merged History List
 
 > **Epic:** 08 — Tabbed Demo UI
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

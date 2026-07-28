@@ -1,8 +1,18 @@
+---
+id: 02-02
+title: OAuth Token Manager — `auth.ts`
+epic: 02
+status: done
+size: M
+blocked_by: [02-01]
+files: [src/lib/mvola/auth.ts]
+issue:
+prior_status:
+---
+
 # Story 02-02: OAuth Token Manager — `auth.ts`
 
 > **Epic:** 02 — MVola Core Library
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

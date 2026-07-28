@@ -1,8 +1,18 @@
+---
+id: 04-01
+title: Root Layout and `page.tsx`
+epic: 04
+status: done
+size: S
+blocked_by: [01-01]
+files: [src/app/layout.tsx, src/app/page.tsx, src/app/globals.css]
+issue:
+prior_status:
+---
+
 # Story 04-01: Root Layout and `page.tsx`
 
 > **Epic:** 04 — Demo UI
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

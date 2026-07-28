@@ -1,8 +1,18 @@
+---
+id: 06-02
+title: Deposit Route — `POST /api/mvola/deposit`
+epic: 06
+status: done
+size: M
+blocked_by: [05-03, 06-01]
+files: [src/app/api/mvola/deposit/route.ts, src/app/api/mvola/deposit/__tests__/route.test.ts]
+issue:
+prior_status:
+---
+
 # Story 06-02: Deposit Route — `POST /api/mvola/deposit`
 
 > **Epic:** 06 — Wallet-Aware MVola Flows
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

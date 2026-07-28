@@ -1,8 +1,18 @@
+---
+id: 05-03
+title: Transaction Store — `src/lib/store/transactions.ts`
+epic: 05
+status: done
+size: M
+blocked_by: [05-01]
+files: [src/lib/store/transactions.ts, src/lib/store/__tests__/transactions.test.ts]
+issue:
+prior_status:
+---
+
 # Story 05-03: Transaction Store — `src/lib/store/transactions.ts`
 
 > **Epic:** 05 — State Store Layer
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

@@ -1,8 +1,18 @@
+---
+id: 06-04
+title: Reconciliation in Status Route — `GET /api/mvola/status/[correlationId]`
+epic: 06
+status: done
+size: M
+blocked_by: [05-02, 05-03]
+files: [src/lib/mvola/reconcile.ts, src/lib/mvola/__tests__/reconcile.test.ts, src/app/api/mvola/status/[correlationId]/route.ts, src/app/api/mvola/status/[correlationId]/__tests__/route.test.ts]
+issue:
+prior_status:
+---
+
 # Story 06-04: Reconciliation in Status Route — `GET /api/mvola/status/[correlationId]`
 
 > **Epic:** 06 — Wallet-Aware MVola Flows
-> **Size:** L
-> **Status:** DONE
 
 ## Description
 

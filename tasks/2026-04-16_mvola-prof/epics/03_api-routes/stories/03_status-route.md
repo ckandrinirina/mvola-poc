@@ -1,8 +1,18 @@
+---
+id: 03-03
+title: Status Route — `GET /api/mvola/status/[correlationId]`
+epic: 03
+status: done
+size: S
+blocked_by: [02-02, 02-03]
+files: [src/app/api/mvola/status/[correlationId]/route.ts]
+issue:
+prior_status:
+---
+
 # Story 03-03: Status Route — `GET /api/mvola/status/[correlationId]`
 
 > **Epic:** 03 — API Routes
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

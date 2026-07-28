@@ -1,8 +1,18 @@
+---
+id: 07-01
+title: Coin-Flip Pure Logic — `src/lib/game/coinflip.ts`
+epic: 07
+status: done
+size: S
+blocked_by: [05-01]
+files: [src/lib/game/coinflip.ts, src/lib/game/__tests__/coinflip.test.ts]
+issue:
+prior_status:
+---
+
 # Story 07-01: Coin-Flip Pure Logic — `src/lib/game/coinflip.ts`
 
 > **Epic:** 07 — Game & Wallet Queries
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

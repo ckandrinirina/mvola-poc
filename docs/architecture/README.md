@@ -2,35 +2,52 @@
 
 > Generated from `docs/API_MerchantPay.pdf` (original spec) on 2026-04-16.
 > Extended with the Wallet + Deposit + Coin-Flip Game + Cash-Out feature on 2026-04-20.
+> Reorganized into the ck-code v4 feature-scoped layout on 2026-07-28.
 > The original specification PDF was not modified.
 
-## Documents
+## Global documents
 
 | Document | Description |
 |----------|-------------|
 | [overview.md](overview.md) | Project vision, goals, and target users |
 | [folder-structure.md](folder-structure.md) | Complete project directory tree with annotations |
 | [tech-stack.md](tech-stack.md) | Languages, frameworks, and library versions |
-| [components.md](components.md) | Component descriptions and responsibilities |
-| [data-flow.md](data-flow.md) | How data moves through the system |
-| [api-contracts.md](api-contracts.md) | Internal API routes and MVola API reference |
 | [configuration.md](configuration.md) | Environment variables and configuration |
 | [dev-guide.md](dev-guide.md) | Prerequisites, setup, and run instructions |
 | [state-management.md](state-management.md) | In-memory store layer: wallet, transactions, game sessions |
-| [features/2026-04-20_wallet-deposit-game.md](features/2026-04-20_wallet-deposit-game.md) | Self-contained spec for the deposit / game / cash-out feature |
+| [\_shared.md](_shared.md) | Cross-cutting infra: architecture diagram, MVola external API reference, shared message formats, conventions |
 | database-schema.md | Not applicable — PoC has no database |
+
+## Feature documents
+
+One self-contained doc per feature. `<slug>` matches the epic folder slug in
+`tasks/2026-04-16_mvola-prof/epics/`, so `tasks/FEATURE_INDEX.md` routes to it.
+
+| Feature | Epic | Description |
+|---------|------|-------------|
+| [foundation](features/foundation/index.md) | 01 | Next.js scaffold, TypeScript/Tailwind config, environment setup |
+| [mvola-core-library](features/mvola-core-library/index.md) | 02 | `src/lib/mvola/` — types, OAuth token manager, HTTP client |
+| [api-routes](features/api-routes/index.md) | 03 | Base MVola proxy routes: token, withdraw, status, callback |
+| [demo-ui](features/demo-ui/index.md) | 04 | First-generation single withdraw form (superseded by tabbed-ui) |
+| [state-store](features/state-store/index.md) | 05 | In-memory wallet / transaction / game stores + domain types |
+| [wallet-aware-mvola](features/wallet-aware-mvola/index.md) | 06 | Deposit direction, wallet reserve on cash-out, idempotent reconciliation |
+| [game-and-queries](features/game-and-queries/index.md) | 07 | Coin-flip game logic + route, balance and history query routes |
+| [tabbed-ui](features/tabbed-ui/index.md) | 08 | Tabbed single-page app: header, deposit, play, cash-out, history |
+| [wallet-deposit-game](features/wallet-deposit-game/index.md) | 05–08 | Cross-cutting spec for the deposit / game / cash-out round-trip |
+
+## Archive
+
+`archive/` holds the pre-v4 layer docs, superseded by the feature docs above and
+`_shared.md`. They are kept for history and are no longer maintained.
+
+| Archived document | Superseded by |
+|---|---|
+| [archive/components.md](archive/components.md) | each feature's `## Components` + [\_shared.md](_shared.md) |
+| [archive/api-contracts.md](archive/api-contracts.md) | each feature's `## API` + [\_shared.md](_shared.md) |
+| [archive/data-flow.md](archive/data-flow.md) | each feature's `## Flows` + [\_shared.md](_shared.md) |
 
 ## Source
 - **Original spec:** `docs/API_MerchantPay.pdf`
 - **Generated:** 2026-04-16
-- **Last updated:** 2026-04-20 (wallet + deposit + coin-flip + cash-out feature)
+- **Last updated:** 2026-07-28 (migrated to the ck-code v4 feature-scoped doc layout)
 - **Gaps remaining:** None
-
-## Changelog
-
-### 2026-04-20 — Wallet, Deposit, Coin-Flip Game, Cash-Out
-Added a realistic end-to-end round-trip: player deposits via MVola, plays a coin-flip game against an in-game wallet, cashes out the balance via MVola. Files touched:
-
-- **Created:** `state-management.md`, `features/2026-04-20_wallet-deposit-game.md`
-- **Updated:** `overview.md` (expanded vision + scope), `folder-structure.md` (new `store/`, `game/`, wallet/game API routes, tabbed UI components), `tech-stack.md` (in-memory store + crypto RNG), `components.md` (all new components and routes + updated diagram and interaction matrix), `data-flow.md` (3 new flows: deposit, coin-flip round, cash-out with reserve/refund; expanded state management section), `api-contracts.md` (new `POST /api/mvola/deposit`, `GET /api/wallet/:msisdn/balance`, `GET /api/wallet/:msisdn/history`, `POST /api/game/coinflip`; refactored withdraw contract to include wallet validation + 409), `configuration.md` (note that no new env vars are required), `dev-guide.md` (full round-trip walkthrough + curl snippets for every new route + troubleshooting for insufficient-funds and deposit-stuck-pending)
-- **Unchanged:** `database-schema.md` (still not applicable), `.env.example`, `package.json`, source code under `src/`

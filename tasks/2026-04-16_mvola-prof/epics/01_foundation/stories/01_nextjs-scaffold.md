@@ -1,8 +1,18 @@
+---
+id: 01-01
+title: Scaffold Next.js 14+ Project with TypeScript & Tailwind
+epic: 01
+status: done
+size: S
+blocked_by: []
+files: [next.config.ts, tsconfig.json, tailwind.config.ts, postcss.config.js, package.json, src/app/layout.tsx, src/app/page.tsx, src/app/globals.css, src/lib/mvola/.gitkeep, src/components/.gitkeep]
+issue:
+prior_status:
+---
+
 # Story 01-01: Scaffold Next.js 14+ Project with TypeScript & Tailwind
 
 > **Epic:** 01 — Project Foundation
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

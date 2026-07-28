@@ -1,6 +1,6 @@
 # State Management
 
-> Companion to [data-flow.md](data-flow.md) and [components.md](components.md) — covers the in-memory store layer that backs the wallet, transaction, and game features.
+> Companion to [features/state-store/index.md](features/state-store/index.md) and [_shared.md](_shared.md) — covers the in-memory store layer that backs the wallet, transaction, and game features.
 
 ## Overview
 

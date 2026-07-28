@@ -1,8 +1,18 @@
+---
+id: 02-01
+title: TypeScript Type Definitions — `types.ts`
+epic: 02
+status: done
+size: S
+blocked_by: [01-01]
+files: [src/lib/mvola/types.ts]
+issue:
+prior_status:
+---
+
 # Story 02-01: TypeScript Type Definitions — `types.ts`
 
 > **Epic:** 02 — MVola Core Library
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

@@ -1,3 +1,10 @@
+---
+epic: 02
+slug: mvola-core-library
+title: MVola Core Library
+description: Implement the server-only MVola integration library under `src/lib/mvola/`.
+---
+
 # Epic 02: MVola Core Library
 
 ## Description
@@ -28,14 +35,6 @@ All code in this epic runs server-side only (Node.js runtime). It must never be 
 
 - **Depends on:** Epic 01 (project scaffold + env vars)
 - **Blocks:** Epic 03
-
-## Stories
-
-| # | Story | Size | Status |
-|---|-------|------|--------|
-| 01 | TypeScript type definitions — `types.ts` | S | TODO |
-| 02 | OAuth token manager with in-memory cache — `auth.ts` | M | TODO |
-| 03 | MVola HTTP client — `client.ts` | M | TODO |
 
 ## Acceptance Criteria
 

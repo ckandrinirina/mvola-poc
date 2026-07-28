@@ -1,8 +1,18 @@
+---
+id: 02-03
+title: MVola HTTP Client — `client.ts`
+epic: 02
+status: done
+size: M
+blocked_by: [02-01, 02-02]
+files: [src/lib/mvola/client.ts]
+issue:
+prior_status:
+---
+
 # Story 02-03: MVola HTTP Client — `client.ts`
 
 > **Epic:** 02 — MVola Core Library
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

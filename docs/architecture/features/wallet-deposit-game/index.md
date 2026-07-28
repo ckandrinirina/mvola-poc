@@ -1,6 +1,11 @@
+---
+slug: wallet-deposit-game
+design: planned
+---
+
 # Feature: Wallet + Deposit + Coin-Flip Game + Cash-Out
 
-> Added on **2026-04-20**. Cross-references: [overview.md](../overview.md) · [folder-structure.md](../folder-structure.md) · [components.md](../components.md) · [data-flow.md](../data-flow.md) · [api-contracts.md](../api-contracts.md) · [state-management.md](../state-management.md) · [dev-guide.md](../dev-guide.md)
+> Added on **2026-04-20**. Cross-references: [overview.md](../../overview.md) · [folder-structure.md](../../folder-structure.md) · [components.md (archived)](../../archive/components.md) · [data-flow.md (archived)](../../archive/data-flow.md) · [api-contracts.md (archived)](../../archive/api-contracts.md) · [state-management.md](../../state-management.md) · [dev-guide.md](../../dev-guide.md)
 
 ## Goal
 
@@ -85,7 +90,7 @@ The deliverable is a single-page tabbed UI and a set of server-side routes, all 
 - All env vars in `.env.example` / `.env.local`
 - `next.config.ts`, `tsconfig.json`, `package.json`
 
-## New flows (detailed in [data-flow.md](../data-flow.md))
+## New flows (detailed in [data-flow.md (archived)](../../archive/data-flow.md))
 
 1. **Deposit** — confirmation-driven wallet credit (credit only when MVola says `completed`)
 2. **Coin-flip round** — synchronous debit → play → credit-on-win, fully internal
@@ -106,7 +111,7 @@ The deliverable is a single-page tabbed UI and a set of server-side routes, all 
 | Cash-out `failed` | `+amount` (refund) | flip to `false` |
 | Cash-out MVola call throws (sync) | `+amount` (immediate refund) | record never created |
 
-Duplicate deliveries (status poll + webhook for the same event) are absorbed by the `walletSettled` guard. See [state-management.md § Idempotency](../state-management.md#idempotency).
+Duplicate deliveries (status poll + webhook for the same event) are absorbed by the `walletSettled` guard. See [state-management.md § Idempotency](../../state-management.md#idempotency).
 
 ## Edge cases
 
@@ -117,7 +122,7 @@ Duplicate deliveries (status poll + webhook for the same event) are absorbed by 
 | Deposit never resolves (MVola hang) | Record stays `pending`; UI keeps polling. No wallet credit until resolved. A manual `curl /api/mvola/status/:id` can be used to force a re-check. |
 | Webhook arrives before the first status poll | Callback route does the full reconciliation; subsequent polls are no-ops |
 | Webhook arrives after status poll already reconciled | Callback route is a no-op (`walletSettled` guard) |
-| Server restart mid-flow | All state is lost: wallet resets to 0, pending transactions vanish. Real MVola-side funds are unaffected. See [state-management.md § Reset behaviour](../state-management.md#reset-behaviour) |
+| Server restart mid-flow | All state is lost: wallet resets to 0, pending transactions vanish. Real MVola-side funds are unaffected. See [state-management.md § Reset behaviour](../../state-management.md#reset-behaviour) |
 | Cash-out MVola call fails synchronously (network error before `serverCorrelationId`) | Wallet refunded immediately inside the route handler; no record persisted |
 | Simultaneous deposit + game play | Safe: each route handler's balance check + mutation is synchronous (no `await` in between), so operations serialise on the single Node event loop |
 

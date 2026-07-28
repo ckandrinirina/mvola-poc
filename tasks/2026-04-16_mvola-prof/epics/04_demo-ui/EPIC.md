@@ -1,3 +1,10 @@
+---
+epic: 04
+slug: demo-ui
+title: Demo UI
+description: Implement the React demo interface that lets a developer exercise the full MVola withdrawal flow end-to-end in a browser.
+---
+
 # Epic 04: Demo UI
 
 ## Description
@@ -29,13 +36,6 @@ This is a demo/PoC UI — the goal is clarity and functionality, not production 
 
 - **Depends on:** Epic 03 (API routes must exist for the form to POST/GET)
 - **Blocks:** Nothing (this is the final deliverable)
-
-## Stories
-
-| # | Story | Size | Status |
-|---|-------|------|--------|
-| 01 | Root layout and `page.tsx` | S | DONE |
-| 02 | `WithdrawForm` component — form, submit, polling, status display | L | DONE |
 
 ## Acceptance Criteria
 

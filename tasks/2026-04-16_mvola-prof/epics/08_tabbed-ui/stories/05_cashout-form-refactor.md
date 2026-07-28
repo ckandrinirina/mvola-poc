@@ -1,8 +1,18 @@
+---
+id: 08-05
+title: Refactor `WithdrawForm` → `CashOutForm` — Wallet-Aware
+epic: 08
+status: done
+size: M
+blocked_by: [06-03, 06-04, 06-05, 08-01]
+files: [src/components/CashOutForm.tsx, src/components/WithdrawForm.tsx, src/components/__tests__/CashOutForm.test.tsx, src/components/__tests__/WithdrawForm.test.tsx]
+issue:
+prior_status:
+---
+
 # Story 08-05: Refactor `WithdrawForm` → `CashOutForm` — Wallet-Aware
 
 > **Epic:** 08 — Tabbed Demo UI
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

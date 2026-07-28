@@ -1,8 +1,18 @@
+---
+id: 07-02
+title: Coin-Flip Route — `POST /api/game/coinflip`
+epic: 07
+status: done
+size: M
+blocked_by: [05-02, 05-04, 07-01]
+files: [src/app/api/game/coinflip/route.ts, src/app/api/game/coinflip/__tests__/route.test.ts]
+issue:
+prior_status:
+---
+
 # Story 07-02: Coin-Flip Route — `POST /api/game/coinflip`
 
 > **Epic:** 07 — Game & Wallet Queries
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

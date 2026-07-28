@@ -1,8 +1,18 @@
+---
+id: 05-01
+title: Domain Type Extensions — `src/lib/mvola/types.ts`
+epic: 05
+status: done
+size: S
+blocked_by: []
+files: [src/lib/mvola/types.ts]
+issue:
+prior_status:
+---
+
 # Story 05-01: Domain Type Extensions — `src/lib/mvola/types.ts`
 
 > **Epic:** 05 — State Store Layer
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

@@ -1,8 +1,18 @@
+---
+id: 05-02
+title: Wallet Store — `src/lib/store/wallets.ts`
+epic: 05
+status: done
+size: M
+blocked_by: [05-01]
+files: [src/lib/store/wallets.ts, src/lib/store/__tests__/wallets.test.ts]
+issue:
+prior_status:
+---
+
 # Story 05-02: Wallet Store — `src/lib/store/wallets.ts`
 
 > **Epic:** 05 — State Store Layer
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

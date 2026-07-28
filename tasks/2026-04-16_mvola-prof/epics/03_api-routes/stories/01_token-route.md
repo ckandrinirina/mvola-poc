@@ -1,8 +1,18 @@
+---
+id: 03-01
+title: Token Route — `POST /api/mvola/token`
+epic: 03
+status: done
+size: S
+blocked_by: [02-02]
+files: [src/app/api/mvola/token/route.ts]
+issue:
+prior_status:
+---
+
 # Story 03-01: Token Route — `POST /api/mvola/token`
 
 > **Epic:** 03 — API Routes
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

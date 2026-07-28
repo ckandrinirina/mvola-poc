@@ -1,3 +1,10 @@
+---
+epic: 01
+slug: foundation
+title: Project Foundation
+description: Set up the Next.js 14+ project scaffold with TypeScript and Tailwind CSS, and configure all environment variables needed for MVola sandbox integration.
+---
+
 # Epic 01: Project Foundation
 
 ## Description
@@ -28,13 +35,6 @@ Set up the Next.js 14+ project scaffold with TypeScript and Tailwind CSS, and co
 
 - **Depends on:** None
 - **Blocks:** Epic 02, Epic 03, Epic 04
-
-## Stories
-
-| # | Story | Size | Status |
-|---|-------|------|--------|
-| 01 | Scaffold Next.js 14+ project with TypeScript & Tailwind | S | DONE |
-| 02 | Environment config — `.env.example` and `.gitignore` | S | TODO |
 
 ## Acceptance Criteria
 

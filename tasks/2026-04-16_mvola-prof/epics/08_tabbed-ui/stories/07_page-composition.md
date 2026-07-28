@@ -1,8 +1,18 @@
+---
+id: 08-07
+title: Compose `page.tsx` + `layout.tsx`
+epic: 08
+status: done
+size: S
+blocked_by: [08-01, 08-02, 08-03, 08-04, 08-05, 08-06]
+files: [src/app/page.tsx, src/app/layout.tsx]
+issue:
+prior_status:
+---
+
 # Story 08-07: Compose `page.tsx` + `layout.tsx`
 
 > **Epic:** 08 — Tabbed Demo UI
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

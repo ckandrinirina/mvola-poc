@@ -1,3 +1,10 @@
+---
+epic: 07
+slug: game-and-queries
+title: Game & Wallet Queries
+description: Add the in-game simulation layer and the read-only wallet query API.
+---
+
 # Epic 07: Game & Wallet Queries
 
 ## Description
@@ -29,15 +36,6 @@ Together these routes make the feature fully exercisable from `curl`: after Epic
 
 - **Depends on:** Epic 05 (wallet, transaction, game stores + domain types)
 - **Blocks:** Epic 08 (UI components call these routes)
-
-## Stories
-
-| # | Story | Size | Status |
-|---|-------|------|--------|
-| 01 | Coin-flip pure logic — `src/lib/game/coinflip.ts` | S | TODO |
-| 02 | Coin-flip route — `POST /api/game/coinflip` | M | TODO |
-| 03 | Balance query route — `GET /api/wallet/[msisdn]/balance` | S | TODO |
-| 04 | History query route — `GET /api/wallet/[msisdn]/history` | M | TODO |
 
 ## Acceptance Criteria
 

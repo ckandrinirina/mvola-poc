@@ -1,3 +1,10 @@
+---
+epic: 05
+slug: state-store
+title: State Store Layer
+description: Introduce the in-memory state store layer that underpins the wallet, deposit, cash-out-with-reserve, coin-flip game, and history features.
+---
+
 # Epic 05: State Store Layer
 
 ## Description
@@ -30,15 +37,6 @@ This epic is purely infrastructural — no route or UI change happens here. Ever
 
 - **Depends on:** None (uses existing patterns from `src/lib/mvola/auth.ts` token cache)
 - **Blocks:** Epic 06 (all wallet-aware MVola flows), Epic 07 (game + wallet query routes)
-
-## Stories
-
-| # | Story | Size | Status |
-|---|-------|------|--------|
-| 01 | Domain type extensions — `types.ts` | S | TODO |
-| 02 | Wallet store — `src/lib/store/wallets.ts` | M | TODO |
-| 03 | Transaction store — `src/lib/store/transactions.ts` | M | TODO |
-| 04 | Game session store — `src/lib/store/games.ts` | S | TODO |
 
 ## Acceptance Criteria
 

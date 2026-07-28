@@ -1,8 +1,18 @@
+---
+id: 07-03
+title: Balance Query Route — `GET /api/wallet/[msisdn]/balance`
+epic: 07
+status: done
+size: S
+blocked_by: [05-02]
+files: [src/app/api/wallet/[msisdn]/balance/route.ts, src/app/api/wallet/[msisdn]/balance/__tests__/route.test.ts]
+issue:
+prior_status:
+---
+
 # Story 07-03: Balance Query Route — `GET /api/wallet/[msisdn]/balance`
 
 > **Epic:** 07 — Game & Wallet Queries
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

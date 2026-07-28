@@ -1,3 +1,10 @@
+---
+epic: 03
+slug: api-routes
+title: API Routes
+description: Implement the four Next.js App Router API routes that proxy all MVola communication server-side.
+---
+
 # Epic 03: API Routes
 
 ## Description
@@ -29,15 +36,6 @@ All routes live in `src/app/api/mvola/` and are server-only (they have access to
 
 - **Depends on:** Epic 02 (auth.ts + client.ts must exist)
 - **Blocks:** Epic 04 (UI calls these routes)
-
-## Stories
-
-| # | Story | Size | Status |
-|---|-------|------|--------|
-| 01 | Token route — `POST /api/mvola/token` | S | TODO |
-| 02 | Withdraw route — `POST /api/mvola/withdraw` | M | TODO |
-| 03 | Status route — `GET /api/mvola/status/[correlationId]` | S | TODO |
-| 04 | Callback route — `PUT /api/mvola/callback` | S | TODO |
 
 ## Acceptance Criteria
 

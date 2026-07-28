@@ -1,8 +1,18 @@
+---
+id: 04-02
+title: WithdrawForm Component — Form, Submit, Polling, Status Display
+epic: 04
+status: done
+size: M
+blocked_by: [04-01, 03-02, 03-03]
+files: [src/components/WithdrawForm.tsx]
+issue:
+prior_status:
+---
+
 # Story 04-02: WithdrawForm Component — Form, Submit, Polling, Status Display
 
 > **Epic:** 04 — Demo UI
-> **Size:** L
-> **Status:** DONE
 
 ## Description
 

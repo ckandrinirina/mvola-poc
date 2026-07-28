@@ -1,8 +1,18 @@
+---
+id: 08-03
+title: `DepositForm` Component — Deposit POST + Polling
+epic: 08
+status: done
+size: M
+blocked_by: [06-02, 06-04, 08-01]
+files: [src/components/DepositForm.tsx, src/components/__tests__/DepositForm.test.tsx]
+issue:
+prior_status:
+---
+
 # Story 08-03: `DepositForm` Component — Deposit POST + Polling
 
 > **Epic:** 08 — Tabbed Demo UI
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

@@ -1,8 +1,18 @@
+---
+id: 08-02
+title: `TabbedLayout` Component — Tab Switcher
+epic: 08
+status: done
+size: S
+blocked_by: []
+files: [src/components/TabbedLayout.tsx, src/components/__tests__/TabbedLayout.test.tsx]
+issue:
+prior_status:
+---
+
 # Story 08-02: `TabbedLayout` Component — Tab Switcher
 
 > **Epic:** 08 — Tabbed Demo UI
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

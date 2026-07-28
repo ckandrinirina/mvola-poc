@@ -1,8 +1,18 @@
+---
+id: 06-05
+title: Reconciliation in Callback Route — `PUT /api/mvola/callback`
+epic: 06
+status: done
+size: M
+blocked_by: [06-04]
+files: [src/app/api/mvola/callback/route.ts, src/app/api/mvola/callback/__tests__/route.test.ts]
+issue:
+prior_status:
+---
+
 # Story 06-05: Reconciliation in Callback Route — `PUT /api/mvola/callback`
 
 > **Epic:** 06 — Wallet-Aware MVola Flows
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

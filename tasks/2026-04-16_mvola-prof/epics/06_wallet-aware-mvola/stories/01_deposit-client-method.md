@@ -1,8 +1,18 @@
+---
+id: 06-01
+title: Deposit HTTP Client Method — `client.ts::initiateDeposit`
+epic: 06
+status: done
+size: M
+blocked_by: [05-01]
+files: [src/lib/mvola/client.ts, src/lib/mvola/__tests__/client.test.ts]
+issue:
+prior_status:
+---
+
 # Story 06-01: Deposit HTTP Client Method — `client.ts::initiateDeposit`
 
 > **Epic:** 06 — Wallet-Aware MVola Flows
-> **Size:** M
-> **Status:** DONE
 
 ## Description
 

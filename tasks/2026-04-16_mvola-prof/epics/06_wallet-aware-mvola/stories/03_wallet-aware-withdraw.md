@@ -1,8 +1,18 @@
+---
+id: 06-03
+title: Wallet-Aware Cash-Out Refactor — `POST /api/mvola/withdraw`
+epic: 06
+status: done
+size: M
+blocked_by: [05-01, 05-02, 05-03]
+files: [src/app/api/mvola/withdraw/route.ts, src/app/api/mvola/withdraw/__tests__/route.test.ts]
+issue:
+prior_status:
+---
+
 # Story 06-03: Wallet-Aware Cash-Out Refactor — `POST /api/mvola/withdraw`
 
 > **Epic:** 06 — Wallet-Aware MVola Flows
-> **Size:** L
-> **Status:** DONE
 
 ## Description
 

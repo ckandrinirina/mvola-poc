@@ -1,8 +1,18 @@
+---
+id: 05-04
+title: Game Session Store — `src/lib/store/games.ts`
+epic: 05
+status: done
+size: S
+blocked_by: [05-01]
+files: [src/lib/store/games.ts, src/lib/store/__tests__/games.test.ts]
+issue:
+prior_status:
+---
+
 # Story 05-04: Game Session Store — `src/lib/store/games.ts`
 
 > **Epic:** 05 — State Store Layer
-> **Size:** S
-> **Status:** DONE
 
 ## Description
 

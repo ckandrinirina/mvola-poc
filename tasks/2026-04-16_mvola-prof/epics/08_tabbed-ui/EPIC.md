@@ -1,3 +1,10 @@
+---
+epic: 08
+slug: tabbed-ui
+title: Tabbed Demo UI
+description: Replace the current single-form demo UI with a richer single-page app that makes the full deposit → play → cash-out → history round-trip tangible in the browser.
+---
+
 # Epic 08: Tabbed Demo UI
 
 ## Description
@@ -33,18 +40,6 @@ All components are React client components that call the server routes created i
 
 - **Depends on:** Epic 06 (deposit, withdraw, reconciliation routes) + Epic 07 (game, balance, history routes)
 - **Blocks:** None — this is the final user-visible epic
-
-## Stories
-
-| # | Story | Size | Status |
-|---|-------|------|--------|
-| 01 | `WalletHeader` component — MSISDN input + balance polling | M | DONE |
-| 02 | `TabbedLayout` component — tab switcher | S | DONE |
-| 03 | `DepositForm` component — deposit POST + polling | M | DONE |
-| 04 | `CoinFlipGame` component — bet + play + result | M | DONE |
-| 05 | Refactor `WithdrawForm` → `CashOutForm` — wallet-aware | M | DONE |
-| 06 | `TransactionHistory` component — merged history list | M | DONE |
-| 07 | Compose `page.tsx` + `layout.tsx` | S | DONE |
 
 ## Acceptance Criteria
 
