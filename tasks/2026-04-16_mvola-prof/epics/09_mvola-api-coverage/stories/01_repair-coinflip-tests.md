@@ -2,7 +2,7 @@
 id: 09-01
 title: Repair the `CoinFlipGame` Test Suite
 epic: 09
-status: todo
+status: done
 size: S
 blocked_by: []
 files: [src/__tests__/components/CoinFlipGame.test.tsx]
@@ -31,13 +31,13 @@ must be green before anything else moves.
 
 ## Acceptance Criteria
 
-- [ ] `npx jest src/__tests__/components/CoinFlipGame.test.tsx` passes — 21/21 checks
-- [ ] `npx jest` passes fully — **332/332 checks, 23/23 suites**
-- [ ] `CoinFlipGame` is rendered inside `<WalletHeader>` so the real `MsisdnContext.Provider` supplies its values, following the `Wrapper` pattern in `src/__tests__/components/TransactionHistory.test.tsx:31-38`
-- [ ] The `defaultProps` spread is removed — context values are no longer passed as props
-- [ ] Variants that previously used `msisdn=""` and `balance={0}` drive those states **through context**: seed (or omit) `localStorage["mvola-prof.msisdn"]` and stub the balance route response accordingly
-- [ ] No production source file is modified — this story touches the test file only
-- [ ] Every assertion the file made before is still made; no check is deleted to make the suite pass
+- [x] `npx jest src/__tests__/components/CoinFlipGame.test.tsx` passes — 21/21 checks
+- [x] `npx jest` passes fully — **332/332 checks, 23/23 suites**
+- [x] `CoinFlipGame` is rendered inside `<WalletHeader>` so the real `MsisdnContext.Provider` supplies its values, following the `Wrapper` pattern in `src/__tests__/components/TransactionHistory.test.tsx:31-38`
+- [x] The `defaultProps` spread is removed — context values are no longer passed as props
+- [x] Variants that previously used `msisdn=""` and `balance={0}` drive those states **through context**: seed (or omit) `localStorage["mvola-prof.msisdn"]` and stub the balance route response accordingly
+- [x] No production source file is modified — this story touches the test file only
+- [x] Every assertion the file made before is still made; no check is deleted to make the suite pass
 
 ## Technical Notes
 
@@ -91,3 +91,25 @@ wrapper, since it is what the other four test files already do.
 
 - **Epic:** 09_mvola-api-coverage
 - **Spec reference:** `docs/specs/2026-07-28_mvola-api-coverage/pre-spec.md` § 5.6; `docs/architecture/features/mvola-api-coverage/index.md` § Test remediation
+
+## Implementation Summary
+
+Rewrote `CoinFlipGame.test.tsx` to render the component inside the real `<WalletHeader>`
+provider instead of passing `msisdn`/`balance`/`refreshBalance` as props via the stale
+`defaultProps` spread. A `renderGame({ msisdn, balance })` helper seeds
+`localStorage["mvola-prof.msisdn"]` (or omits it, for the empty-msisdn case) and stubs the
+`GET /api/wallet/{msisdn}/balance` route; a `mockCoinflipResponse(balance, response)` helper
+routes the global `mockFetch` mock by request URL so the balance poll and the game's own
+`POST /api/game/coinflip` never cross-serve each other's payload. Initial renders and timer
+advances are wrapped in `act()` so WalletHeader's `setInterval` balance poll settles before
+assertions run. The "calls refreshBalance" checks now assert on an additional `/balance`
+fetch call (the observable effect of the context's `refreshBalance`) since the function is no
+longer independently mockable as a prop. Every prior assertion is preserved; none were
+removed to force a pass.
+
+**Files Touched:**
+- MODIFIED: `src/__tests__/components/CoinFlipGame.test.tsx` (full rewrite, 205 lines changed)
+
+**Verification:** `npx jest src/__tests__/components/CoinFlipGame.test.tsx` → 21/21 passed.
+`npx jest` (full suite) → 332/332 tests, 23/23 suites passed. No production source file was
+modified.
