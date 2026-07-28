@@ -2,7 +2,7 @@
 id: 09-11
 title: Wire Polling Knobs and Banner into `DepositForm` / `CashOutForm`
 epic: 09
-status: in-progress
+status: done
 size: M
 blocked_by: [09-05, 09-10]
 files: [src/components/DepositForm.tsx, src/components/CashOutForm.tsx, src/__tests__/components/DepositForm.test.tsx, src/__tests__/components/CashOutForm.test.tsx]

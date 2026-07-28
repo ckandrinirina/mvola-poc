@@ -44,7 +44,7 @@
 | 09 · Mvola Api Coverage | 09-08 | Details Route — `GET /api/mvola/transaction/[transactionReference]` | DONE | M | 09-06, 09-07 | epics/09_mvola-api-coverage/stories/08_transaction-details-route.md |
 | 09 · Mvola Api Coverage | 09-09 | Polling Policy Module + Client Config Exposure | DONE | M | 09-01 | epics/09_mvola-api-coverage/stories/09_polling-policy.md |
 | 09 · Mvola Api Coverage | 09-10 | `PendingApprovalBanner` Component | DONE | M | 09-09 | epics/09_mvola-api-coverage/stories/10_pending-approval-banner.md |
-| 09 · Mvola Api Coverage | 09-11 | Wire Polling Knobs and Banner into `DepositForm` / `CashOutForm` | TODO | M | 09-05, 09-10 | epics/09_mvola-api-coverage/stories/11_form-polling-wiring.md |
+| 09 · Mvola Api Coverage | 09-11 | Wire Polling Knobs and Banner into `DepositForm` / `CashOutForm` | DONE | M | 09-05, 09-10 | epics/09_mvola-api-coverage/stories/11_form-polling-wiring.md |
 | 09 · Mvola Api Coverage | 09-12 | `TransactionHistory` — Expandable Settled Row | DONE | L | 09-08, 09-10 | epics/09_mvola-api-coverage/stories/12_history-expandable-row.md |
 | 09 · Mvola Api Coverage | 09-13 | `scripts/preflight.mjs` — Demo Preflight Check | DONE | M | 09-01 | epics/09_mvola-api-coverage/stories/13_preflight-script.md |
 | 09 · Mvola Api Coverage | 09-14 | End-to-End Sandbox Walkthrough & Payload Capture | TODO | M | 09-03, 09-04, 09-05, 09-11, 09-12, 09-13 | epics/09_mvola-api-coverage/stories/14_sandbox-walkthrough-verification.md |
