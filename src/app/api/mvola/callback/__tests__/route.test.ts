@@ -298,6 +298,64 @@ describe("PUT /api/mvola/callback", () => {
     );
   });
 
+  // --- Unified interpretation via parseMvolaStatus() (story 09-04) ------
+
+  it("reconciles identically for status/objectReference as for transactionStatus/transactionReference", async () => {
+    const recordA = makeDepositRecord("corr-spelling-a");
+    const recordB = makeDepositRecord("corr-spelling-b");
+    mockReconcile.mockImplementation(() => undefined);
+
+    mockGetByCorrelationId.mockReturnValueOnce(recordA);
+    await PUT(
+      makeRequest({
+        serverCorrelationId: "corr-spelling-a",
+        transactionStatus: "completed",
+        transactionReference: "mvola-ref-shared",
+      })
+    );
+
+    mockGetByCorrelationId.mockReturnValueOnce(recordB);
+    await PUT(
+      makeRequest({
+        serverCorrelationId: "corr-spelling-b",
+        status: "completed",
+        objectReference: "mvola-ref-shared",
+      })
+    );
+
+    expect(mockReconcile).toHaveBeenNthCalledWith(
+      1,
+      recordA,
+      "completed",
+      "mvola-ref-shared"
+    );
+    expect(mockReconcile).toHaveBeenNthCalledWith(
+      2,
+      recordB,
+      "completed",
+      "mvola-ref-shared"
+    );
+  });
+
+  it("a body carrying an unreadable status reconciles as pending (no-op, rule R3)", async () => {
+    const record = makeDepositRecord("corr-unreadable-001");
+    mockGetByCorrelationId.mockReturnValue(record);
+    mockReconcile.mockImplementation(() => undefined);
+
+    const req = makeRequest({
+      serverCorrelationId: "corr-unreadable-001",
+      transactionStatus: "not-a-real-status",
+      transactionReference: "ref-001",
+    });
+
+    const response = await PUT(req);
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json).toEqual({ received: true });
+    expect(mockReconcile).toHaveBeenCalledWith(record, "pending", "ref-001");
+  });
+
   // --- Logging ----------------------------------------------------------
 
   it("logs a warning for unknown correlationId", async () => {
