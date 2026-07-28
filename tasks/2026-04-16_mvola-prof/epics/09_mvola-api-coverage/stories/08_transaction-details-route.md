@@ -26,17 +26,17 @@ demonstrate.
 
 ## Acceptance Criteria
 
-- [ ] `GET /api/mvola/transaction/[transactionReference]` returns `200 { mvola, local }`
-- [ ] `mvola` is the body from `getTransactionDetails()` **forwarded unaltered** — not reshaped, renamed, or filtered to resemble the local record
-- [ ] `local` is the `TransactionRecord` found via `getTransactionByMvolaReference()`
-- [ ] The response contains no verdict, match flag, or diff field
-- [ ] No local record carrying that reference → `404 { error: "No local transaction carries that reference" }`, and MVola is not called
-- [ ] A MVola error or token failure → `502 { error: "MVola API error", details }`
-- [ ] **Nothing is fabricated.** A MVola rejection is surfaced as a 502; no synthesised or placeholder record is ever returned
-- [ ] The route is server-only; no credential reaches the response body (rule R5)
-- [ ] The `params` promise is awaited, matching the Next.js 15 signature used by `status/[correlationId]/route.ts:34`
-- [ ] Tests cover: 200 with both objects present, unknown reference → 404 without a MVola call, MVola throw → 502, `mvola` forwarded byte-for-byte, no verdict key in any response
-- [ ] `npx jest` passes fully
+- [x] `GET /api/mvola/transaction/[transactionReference]` returns `200 { mvola, local }`
+- [x] `mvola` is the body from `getTransactionDetails()` **forwarded unaltered** — not reshaped, renamed, or filtered to resemble the local record
+- [x] `local` is the `TransactionRecord` found via `getTransactionByMvolaReference()`
+- [x] The response contains no verdict, match flag, or diff field
+- [x] No local record carrying that reference → `404 { error: "No local transaction carries that reference" }`, and MVola is not called
+- [x] A MVola error or token failure → `502 { error: "MVola API error", details }`
+- [x] **Nothing is fabricated.** A MVola rejection is surfaced as a 502; no synthesised or placeholder record is ever returned
+- [x] The route is server-only; no credential reaches the response body (rule R5)
+- [x] The `params` promise is awaited, matching the Next.js 15 signature used by `status/[correlationId]/route.ts:34`
+- [x] Tests cover: 200 with both objects present, unknown reference → 404 without a MVola call, MVola throw → 502, `mvola` forwarded byte-for-byte, no verdict key in any response
+- [x] `npx jest` passes fully
 
 ## Technical Notes
 
@@ -95,3 +95,35 @@ object is forwarded unchanged instead.
 
 - **Epic:** 09_mvola-api-coverage
 - **Spec reference:** pre-spec § 5.1, § 6; feature doc § Details route, § Flow C
+
+## Implementation Summary
+
+Implemented `GET /api/mvola/transaction/[transactionReference]` exactly per the Technical
+Notes: check the local record first (via `getTransactionByMvolaReference()`), return `404`
+without touching MVola when it's missing, otherwise acquire a token and call
+`getTransactionDetails()`, returning `{ mvola, local }` with `mvola` forwarded verbatim and
+no verdict/match/diff field anywhere in the response. A token or MVola failure is caught and
+translated to `502 { error: "MVola API error", details }` — nothing is fabricated. Added
+`export const runtime = "nodejs"` per `guide-nextjs`/`expert-backend`'s standard for routes
+under `src/app/api/mvola/**` that read secrets via `getToken()`.
+
+**SOLID:** SRP — the handler only orchestrates (lookup → token → MVola call → shape
+response); DIP — depends on the narrow `getToken`/`getTransactionDetails`/
+`getTransactionByMvolaReference` function abstractions, fully mockable via `jest.mock`; OCP —
+response shaping never inspects `mvola`'s internal shape, so a wider MVola reply requires no
+route change.
+
+**Tests (9, all green):** 200 with both objects; local lookup called with the path
+reference; 404 with no local record and no `getToken`/`getTransactionDetails` call; 502 on
+`getTransactionDetails` throw; 502 on `getToken` throw (with `getTransactionDetails` never
+called); `mvola` forwarded byte-for-byte including unknown/extra keys; no verdict/match/diff
+key in the 200, 404, and 502 responses.
+
+**QA:** PASS (`ck-code:qa-validator`) — all acceptance criteria verified against
+`route.ts`/`route.test.ts` with file:line citations; full suite 460/460 green;
+`tsc --noEmit` clean; no credential leakage; dependency files untouched.
+
+### Files Touched
+
+- CREATED `src/app/api/mvola/transaction/[transactionReference]/route.ts`
+- CREATED `src/app/api/mvola/transaction/[transactionReference]/__tests__/route.test.ts`
