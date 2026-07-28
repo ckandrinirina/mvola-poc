@@ -679,7 +679,7 @@ describe("TransactionHistory", () => {
     });
 
     it("fetches transaction details once on expand; collapsing and re-expanding does not refetch", async () => {
-      const detailsHandler = jest.fn(() =>
+      const detailsHandler = jest.fn((_url: string) =>
         Promise.resolve({ ok: true, json: async () => MVOLA_COMPARISON_BODY })
       );
       mockFetch.mockImplementation(
@@ -926,7 +926,7 @@ describe("TransactionHistory", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/heads|tails/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/heads|tails/i).length).toBeGreaterThan(0);
       });
       expect(
         screen.queryByRole("button", { name: /compare with mvola/i })
@@ -959,6 +959,72 @@ describe("TransactionHistory", () => {
       });
 
       expect(button).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("keeps a row expanded across a balance-triggered history refetch, and does not refetch details again", async () => {
+      let balanceCallCount = 0;
+      const detailsHandler = jest.fn((_url: string) =>
+        Promise.resolve({ ok: true, json: async () => MVOLA_COMPARISON_BODY })
+      );
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes("/balance")) {
+          balanceCallCount += 1;
+          // Second call onward returns a changed balance, so WalletHeader's
+          // setBalance triggers TransactionHistory's [msisdn, balance] effect.
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ balance: balanceCallCount === 1 ? 5000 : 4500 }),
+          });
+        }
+        if (url.includes("/api/config/polling")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ pollIntervalMs: 3000, pollTimeoutMs: 120_000 }),
+          });
+        }
+        if (url.includes("/api/mvola/transaction/")) {
+          return detailsHandler(url);
+        }
+        // A fresh array each call — mimics a real refetch returning new objects
+        // for the same logical entries (same localTxId).
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ msisdn: "0343500003", entries: [{ ...TRANSACTION_ENTRY }] }),
+        });
+      });
+
+      await act(async () => {
+        render(<Wrapper />);
+        await Promise.resolve();
+      });
+
+      const button = await screen.findByRole("button", { name: /compare with mvola/i });
+      await act(async () => {
+        fireEvent.click(button);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => expect(screen.getByText(/mvola record/i)).toBeInTheDocument());
+      expect(detailsHandler).toHaveBeenCalledTimes(1);
+
+      // Advance WalletHeader's balance poll (2000ms) so balance changes and
+      // TransactionHistory's history effect (keyed on [msisdn, balance]) refetches.
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /hide mvola comparison/i })).toHaveAttribute(
+          "aria-expanded",
+          "true"
+        );
+        expect(screen.getByText(/mvola record/i)).toBeInTheDocument();
+      });
+      expect(detailsHandler).toHaveBeenCalledTimes(1);
     });
   });
 });
