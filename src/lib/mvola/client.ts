@@ -20,6 +20,7 @@ import type {
   TransactionStatusResponse,
   TransactionDetailsResponse,
 } from "./types";
+import { getBaseUrl } from "./base-url";
 
 /**
  * Parameters for initiating a withdrawal.
@@ -44,16 +45,6 @@ export interface DepositParams {
   description?: string;
   /** Optional currency code; defaults to "Ar" */
   currency?: string;
-}
-
-/**
- * Resolves the MVola base URL from the MVOLA_ENV environment variable.
- * Defaults to sandbox (devapi.mvola.mg) when MVOLA_ENV is not "production".
- */
-function getBaseUrl(): string {
-  return process.env.MVOLA_ENV === "production"
-    ? "https://api.mvola.mg"
-    : "https://devapi.mvola.mg";
 }
 
 /**
