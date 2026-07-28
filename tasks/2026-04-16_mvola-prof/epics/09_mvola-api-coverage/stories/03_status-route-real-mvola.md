@@ -2,7 +2,7 @@
 id: 09-03
 title: Status Route — Remove the Sandbox Short-Circuit
 epic: 09
-status: todo
+status: done
 size: M
 blocked_by: [09-02]
 files: [src/app/api/mvola/status/[correlationId]/route.ts, src/__tests__/app/api/mvola/status/[correlationId]/route.test.ts]
@@ -31,17 +31,17 @@ said so* — never because a timer expired.
 
 ## Acceptance Criteria
 
-- [ ] The `isSandbox` constant and the `|| isSandbox` clause at `route.ts:45-46` are deleted
-- [ ] `MVOLA_ENV` is not referenced anywhere in this file
-- [ ] A `pending` local record in a non-production environment results in a real `getTransactionStatus()` call
-- [ ] A terminal local record (`completed` / `failed`) still returns local truth **without** calling MVola or acquiring a token
-- [ ] The MVola reply is passed through `parseMvolaStatus()` before both reconciliation and the response
-- [ ] `reconcileTransaction()` receives the parsed status and parsed reference
-- [ ] An unknown `correlationId` (no local record) is still tolerated: reconciliation is skipped, MVola's body is still returned
-- [ ] The response body keeps `transactionStatus` and `transactionReference` **and** adds `status` and `objectReference`, so existing UI polling (`DepositForm.tsx:38`, `CashOutForm.tsx`) keeps working unchanged
-- [ ] A MVola error or token failure still returns `502 { error }`
-- [ ] Tests cover: sandbox env reaches MVola, terminal record skips MVola, `status`-spelled reply reconciles, `transactionStatus`-spelled reply reconciles identically, unknown correlationId, 502 path
-- [ ] `npx jest` passes fully
+- [x] The `isSandbox` constant and the `|| isSandbox` clause at `route.ts:45-46` are deleted
+- [x] `MVOLA_ENV` is not referenced anywhere in this file
+- [x] A `pending` local record in a non-production environment results in a real `getTransactionStatus()` call
+- [x] A terminal local record (`completed` / `failed`) still returns local truth **without** calling MVola or acquiring a token
+- [x] The MVola reply is passed through `parseMvolaStatus()` before both reconciliation and the response
+- [x] `reconcileTransaction()` receives the parsed status and parsed reference
+- [x] An unknown `correlationId` (no local record) is still tolerated: reconciliation is skipped, MVola's body is still returned
+- [x] The response body keeps `transactionStatus` and `transactionReference` **and** adds `status` and `objectReference`, so existing UI polling (`DepositForm.tsx:38`, `CashOutForm.tsx`) keeps working unchanged
+- [x] A MVola error or token failure still returns `502 { error }`
+- [x] Tests cover: sandbox env reaches MVola, terminal record skips MVola, `status`-spelled reply reconciles, `transactionStatus`-spelled reply reconciles identically, unknown correlationId, 502 path
+- [x] `npx jest` passes fully
 
 ## Technical Notes
 
@@ -111,3 +111,44 @@ covered scenarios should go up, not down.
 - **Epic:** 09_mvola-api-coverage
 - **Related stories:** 09-04 (same interpretation, callback path)
 - **Spec reference:** pre-spec § 5.3, § 5.4; feature doc § Status route, § Flow B
+
+---
+
+## Implementation Summary
+
+**Completed:** 2026-07-28
+**TDD Iterations:** 1 (route.ts short-circuit removal + parseMvolaStatus() wiring, together with the full route.test.ts rewrite, red→green in one cycle since both files shared the same acceptance criteria)
+**QA Iterations:** 1
+**Manual-test bugs:** none
+**Tests written:** 11 (full rewrite of route.test.ts: 6 passthrough tests, 3 deposit-reconciliation tests, 2 withdraw-reconciliation tests)
+**Files created:** 0
+**Files modified:** 2
+**Unplanned changes:** none
+
+### What Was Implemented
+
+- Deleted the `isSandbox` constant and the `|| isSandbox` clause from the status route's
+  short-circuit — a `pending` local record now always reaches MVola's real
+  `getTransactionStatus()`, in every environment. The only remaining skip is a genuinely
+  terminal local record (`status !== "pending"`), which returns local truth without calling
+  MVola or acquiring a token.
+- Both the skip path and the live path now build their response through
+  `parseMvolaStatus()` (from `src/lib/mvola/status.ts`, story 09-02) so the status route and
+  the callback route share one interpretation of MVola's reply.
+- `reconcileTransaction()` now receives the parsed `status`/`reference` pair instead of
+  reading `transactionStatus`/`transactionReference` directly off the MVola response — this
+  closes the 9 `tsc` errors story 09-02 opened by making those two fields optional.
+- The response body spreads MVola's raw reply first, then overrides both spellings
+  (`transactionStatus`/`status`, `transactionReference`/`objectReference`) so existing UI
+  polling (`DepositForm.tsx`, `CashOutForm.tsx`) keeps reading `transactionStatus` unchanged.
+- Removed the stale sandbox-rationale comment block that no longer applied.
+- Rewrote `route.test.ts` in full: sandbox/non-production env still reaching MVola for a
+  pending record, an already-terminal record skipping both `getTransactionStatus()` and
+  `getToken()`, both the `status`-spelled and legacy `transactionStatus`-spelled MVola replies
+  reconciling identically, an unknown `correlationId` still returning MVola's body untouched,
+  and both 502 error paths (MVola failure, token failure).
+
+### Files Touched
+
+MODIFIED src/app/api/mvola/status/[correlationId]/route.ts:1-79
+MODIFIED src/__tests__/app/api/mvola/status/[correlationId]/route.test.ts:1-357
