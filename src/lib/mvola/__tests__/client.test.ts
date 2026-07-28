@@ -11,6 +11,8 @@
  * - Request body includes requestDate as ISO 8601 and requestingOrganisationTransactionReference as game-withdrawal-{uuid}
  * - Returns typed responses
  * - Throws on non-200 responses with error detail
+ * - getTransactionDetails() sends GET to the transaction details endpoint,
+ *   URL-encodes the reference, reuses buildHeaders()/throwOnError() unchanged
  */
 
 describe("client.ts — initiateWithdrawal()", () => {
@@ -673,5 +675,140 @@ describe("client.ts — getTransactionStatus()", () => {
       .headers as Record<string, string>;
 
     expect(headers1["X-CorrelationID"]).not.toBe(headers2["X-CorrelationID"]);
+  });
+});
+
+describe("client.ts — getTransactionDetails()", () => {
+  const ORIGINAL_ENV = process.env;
+
+  beforeEach(() => {
+    jest.resetModules();
+    process.env = {
+      ...ORIGINAL_ENV,
+      MVOLA_ENV: "sandbox",
+      MVOLA_MERCHANT_MSISDN: "0343500003",
+      MVOLA_PARTNER_NAME: "TestPartner",
+    };
+  });
+
+  afterEach(() => {
+    process.env = ORIGINAL_ENV;
+    jest.restoreAllMocks();
+  });
+
+  function mockFetchSuccess(body: object) {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => body,
+    } as Response);
+  }
+
+  function mockFetchError(status: number, body: object | string) {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status,
+      json: async () =>
+        typeof body === "string" ? { error: body } : body,
+      text: async () =>
+        typeof body === "string" ? body : JSON.stringify(body),
+    } as unknown as Response);
+  }
+
+  it("sends GET to the sandbox transaction details endpoint with the reference", async () => {
+    mockFetchSuccess({ transactionReference: "MVL-001", transactionStatus: "completed" });
+    const { getTransactionDetails } = await import("../client");
+
+    await getTransactionDetails("MVL-001", "test-token");
+
+    const [url, options] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      RequestInit
+    ];
+    expect(url).toBe(
+      "https://devapi.mvola.mg/mvola/mm/transactions/type/merchantpay/1.0.0/MVL-001"
+    );
+    expect(options.method).toBe("GET");
+  });
+
+  it("sends GET to the production transaction details endpoint when MVOLA_ENV=production", async () => {
+    process.env.MVOLA_ENV = "production";
+    jest.resetModules();
+    mockFetchSuccess({ transactionReference: "MVL-001", transactionStatus: "completed" });
+    const { getTransactionDetails } = await import("../client");
+
+    await getTransactionDetails("MVL-001", "test-token");
+
+    const [url] = (global.fetch as jest.Mock).mock.calls[0] as [string];
+    expect(url).toBe(
+      "https://api.mvola.mg/mvola/mm/transactions/type/merchantpay/1.0.0/MVL-001"
+    );
+  });
+
+  it("URL-encodes the transaction reference into the path", async () => {
+    mockFetchSuccess({ transactionReference: "MVL 001/ref" });
+    const { getTransactionDetails } = await import("../client");
+
+    await getTransactionDetails("MVL 001/ref", "test-token");
+
+    const [url] = (global.fetch as jest.Mock).mock.calls[0] as [string];
+    expect(url).toBe(
+      `https://devapi.mvola.mg/mvola/mm/transactions/type/merchantpay/1.0.0/${encodeURIComponent(
+        "MVL 001/ref"
+      )}`
+    );
+  });
+
+  it("attaches all required headers via buildHeaders()", async () => {
+    mockFetchSuccess({ transactionReference: "MVL-001" });
+    const { getTransactionDetails } = await import("../client");
+
+    await getTransactionDetails("MVL-001", "my-access-token");
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      RequestInit
+    ];
+    const headers = options.headers as Record<string, string>;
+
+    expect(headers["Authorization"]).toBe("Bearer my-access-token");
+    expect(headers["UserAccountIdentifier"]).toBe("msisdn;0343500003");
+    expect(headers["partnerName"]).toBe("TestPartner");
+    expect(headers["Content-Type"]).toBe("application/json");
+    expect(headers["UserLanguage"]).toBe("FR");
+    expect(headers["Version"]).toBe("1.0");
+    expect(headers["Cache-Control"]).toBe("no-cache");
+    expect(headers["X-CorrelationID"]).toBeDefined();
+  });
+
+  it("returns the parsed body verbatim on 200, preserving unknown keys", async () => {
+    const body = {
+      amount: "5000",
+      currency: "Ar",
+      transactionReference: "MVL-001",
+      transactionStatus: "completed",
+      createDate: "2026-07-28T10:00:00.000Z",
+      debitParty: [{ key: "msisdn", value: "0343500003" }],
+      creditParty: [{ key: "msisdn", value: "0343500004" }],
+      someFutureField: "unmapped-value",
+    };
+    mockFetchSuccess(body);
+    const { getTransactionDetails } = await import("../client");
+
+    const result = await getTransactionDetails("MVL-001", "test-token");
+
+    expect(result).toEqual(body);
+  });
+
+  it("throws via throwOnError with status and body in the message on non-200", async () => {
+    mockFetchError(404, { errorMessage: "Not Found" });
+    const { getTransactionDetails } = await import("../client");
+
+    await expect(
+      getTransactionDetails("unknown-ref", "test-token")
+    ).rejects.toThrow(/404/);
+    await expect(
+      getTransactionDetails("unknown-ref", "test-token")
+    ).rejects.toThrow(/Not Found/);
   });
 });
