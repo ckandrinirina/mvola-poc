@@ -18,6 +18,7 @@ import { reconcileTransaction } from "../reconcile";
 import {
   createTransaction,
   getTransactionById,
+  getTransactionByCorrelationId,
   getTransactionByMvolaReference,
   updateTransactionStatus,
   resetAll as resetTransactions,
@@ -239,6 +240,136 @@ describe("reconcileTransaction — withdraw", () => {
 
     expect(getTransactionById(record.localTxId)!.status).toBe("pending");
     expect(getWallet(msisdn)!.balance).toBe(balanceBefore);
+  });
+});
+
+// --- Concurrency: stale-snapshot race between poll and callback --------
+
+/**
+ * The status route (`GET /api/mvola/status/[correlationId]`) captures the
+ * local record BEFORE two awaits (`getToken()` then `getTransactionStatus()`)
+ * and only then calls `reconcileTransaction`. Because the transaction store is
+ * copy-on-write, that captured object is a *stale snapshot*: a callback for the
+ * same transaction that settles the wallet while the poll is suspended writes a
+ * brand-new object into the store, leaving the poll's reference frozen at
+ * `status: "pending"` / `walletSettled: false`.
+ *
+ * `reconcileTransaction` must therefore derive its idempotency guard from the
+ * authoritative record in the store, not from the caller's snapshot.
+ */
+describe("reconcileTransaction — stale snapshot race (poll vs callback)", () => {
+  it("credits a deposit exactly once when the callback settles while the status poll is suspended", async () => {
+    const msisdn = "0340000030";
+    const amount = 6000;
+    const correlationId = "corr-race-deposit";
+    const record = makeDeposit(msisdn, amount, correlationId);
+
+    // Status route: snapshots the record, then yields at its two awaits.
+    const statusPoll = (async () => {
+      const snapshot = getTransactionByCorrelationId(correlationId)!;
+      expect(snapshot.status).toBe("pending");
+      await Promise.resolve(); // suspends at `await getToken()`
+      await Promise.resolve(); // suspends at `await getTransactionStatus()`
+      reconcileTransaction(snapshot, "completed", "mvola-ref-race-poll");
+    })();
+
+    // Callback route wins the race: it reads its own FRESH copy and settles.
+    reconcileTransaction(
+      getTransactionByCorrelationId(correlationId)!,
+      "completed",
+      "mvola-ref-race-callback"
+    );
+    expect(getWallet(msisdn)?.balance).toBe(amount);
+
+    // Status poll resumes holding the now-stale "pending" object.
+    await statusPoll;
+
+    // Exactly ONE credit — not two.
+    expect(getWallet(msisdn)?.balance).toBe(amount);
+
+    const settled = getTransactionById(record.localTxId)!;
+    expect(settled.status).toBe("completed");
+    expect(settled.walletSettled).toBe(true);
+    // The losing poll must not have re-indexed its own reference either.
+    expect(settled.mvolaReference).toBe("mvola-ref-race-callback");
+    expect(getTransactionByMvolaReference("mvola-ref-race-poll")).toBeUndefined();
+  });
+
+  it("refunds a failed withdraw exactly once when the callback refunds while the status poll is suspended", async () => {
+    const msisdn = "0340000031";
+    const amount = 3500;
+    const correlationId = "corr-race-withdraw";
+
+    // Pre-debited wallet: walletSettled=true means the balance is already reduced.
+    creditWallet(msisdn, 10000 - amount);
+    const balanceBefore = getWallet(msisdn)!.balance;
+
+    const record = makeWithdraw(msisdn, amount, correlationId);
+
+    const statusPoll = (async () => {
+      const snapshot = getTransactionByCorrelationId(correlationId)!;
+      expect(snapshot.status).toBe("pending");
+      expect(snapshot.walletSettled).toBe(true);
+      await Promise.resolve();
+      await Promise.resolve();
+      reconcileTransaction(snapshot, "failed", "mvola-ref-race-poll-w");
+    })();
+
+    reconcileTransaction(
+      getTransactionByCorrelationId(correlationId)!,
+      "failed",
+      "mvola-ref-race-callback-w"
+    );
+    expect(getWallet(msisdn)!.balance).toBe(balanceBefore + amount);
+
+    await statusPoll;
+
+    // Exactly ONE refund — not two.
+    expect(getWallet(msisdn)!.balance).toBe(balanceBefore + amount);
+
+    const settled = getTransactionById(record.localTxId)!;
+    expect(settled.status).toBe("failed");
+    expect(settled.walletSettled).toBe(false);
+    expect(settled.mvolaReference).toBe("mvola-ref-race-callback-w");
+  });
+
+  it("does not settle twice when a deposit poll resumes with a snapshot that failed meanwhile", async () => {
+    const msisdn = "0340000032";
+    const amount = 2200;
+    const correlationId = "corr-race-mixed";
+    const record = makeDeposit(msisdn, amount, correlationId);
+
+    const staleSnapshot = getTransactionByCorrelationId(correlationId)!;
+    await Promise.resolve();
+
+    // Callback marks the deposit FAILED (no credit).
+    reconcileTransaction(
+      getTransactionByCorrelationId(correlationId)!,
+      "failed",
+      "mvola-ref-mixed-callback"
+    );
+
+    // Stale poll resumes believing it is still pending and reports "completed".
+    // It must not resurrect the record nor credit the wallet.
+    reconcileTransaction(staleSnapshot, "completed", "mvola-ref-mixed-poll");
+
+    expect(getWallet(msisdn)?.balance ?? 0).toBe(0);
+    const settled = getTransactionById(record.localTxId)!;
+    expect(settled.status).toBe("failed");
+    expect(settled.mvolaReference).toBe("mvola-ref-mixed-callback");
+  });
+
+  it("returns without throwing when the record no longer exists in the store", () => {
+    const msisdn = "0340000033";
+    const record = makeDeposit(msisdn, 1000, "corr-race-vanished");
+
+    // Simulate a record the caller holds but the store no longer knows about.
+    resetTransactions();
+
+    expect(() =>
+      reconcileTransaction(record, "completed", "mvola-ref-vanished")
+    ).not.toThrow();
+    expect(getWallet(msisdn)?.balance ?? 0).toBe(0);
   });
 });
 
