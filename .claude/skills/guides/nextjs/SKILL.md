@@ -1,227 +1,347 @@
 ---
 name: guide-nextjs
 description: >
-  Next.js 14+ App Router best practices for mvola-prof. Server vs. Client
-  Components, Route Handlers, dynamic segments, env vars, and Node runtime
-  selection. Reference for any /expert-* skill writing or reviewing Next.js
-  code.
+  Next.js 16 App Router best practices for mvola-prof. Async params in Route Handlers,
+  the inverted caching defaults, runtime selection, server/client boundary and secret
+  leakage, module-level state, and the 14 to 16 migration traps. Researched from official
+  documentation. Reference for any /expert-* skill writing or reviewing Next.js code.
 user-invocable: false
+paths:
+  - "src/app/**/*.{ts,tsx}"
+  - "next.config.ts"
 ---
+
+<!-- ck-code:team GENERATED — /ck-code:team may overwrite this file on --regenerate. Delete this line to protect manual edits. -->
 
 # Next.js Best Practices Guide (mvola-prof)
 
-> Auto-generated from official documentation via context7 (`/vercel/next.js/v15.1.8`).
-> Last researched: 2026-04-17
-> Version in project: Next.js 14+ (App Router)
+> Auto-generated from official documentation.
+> Last researched: 2026-07-28
+> Version in project: Next.js 16.2.4 (App Router)
 
 ## Project Context
 
-mvola-prof is a single Next.js 14+ App Router project. The frontend (a single
-demo page + form) and the backend (4 MVola proxy routes) live in the same
-project. All MVola credentials are server-only env vars.
+**mvola-prof** is a proof-of-concept Next.js application demonstrating a realistic,
+end-to-end **MVola Merchant Pay** (Madagascar mobile money) integration in a game
+context: a player deposits real money from their MVola account into an in-game wallet,
+plays a simulated coin-flip betting game, and cashes out the remaining balance back to
+their MVola number.
+
+**Architecture:** a single Next.js App Router project. The browser never calls MVola —
+every call is proxied through server-side Route Handlers so credentials stay on the
+server. There is **no database**: wallet, transaction, and game state live in
+module-level `Map` singletons that die with the process.
+
+| Area | Location | Purpose |
+|---|---|---|
+| MVola proxy routes | `src/app/api/mvola/**` | `token/`, `deposit/`, `withdraw/`, `status/[correlationId]/`, `callback/` (PUT webhook) |
+| Internal routes | `src/app/api/wallet/[msisdn]/{balance,history}/`, `src/app/api/game/coinflip/` | read wallet state, play a round — no MVola call |
+| MVola client library | `src/lib/mvola/` | `auth.ts` (OAuth token + in-memory cache), `client.ts` (HTTP + base-URL selection), `reconcile.ts` (idempotent wallet settlement), `types.ts` (all shapes) |
+| State store | `src/lib/store/` | `wallets.ts`, `transactions.ts`, `games.ts` — `Map` singletons, typed accessors only, each exports `resetAll()` |
+| Game logic | `src/lib/game/coinflip.ts` | pure, RNG injected for determinism |
+| UI | `src/components/` | `WalletHeader`, `TabbedLayout`, `DepositForm`, `CashOutForm`, `CoinFlipGame`, `TransactionHistory` |
+
+**Tech stack — `package.json` is authoritative:**
+
+| Layer | Actual installed version |
+|---|---|
+| Framework | **Next.js 16.2.4** (App Router, Turbopack default) |
+| UI | **React 19.2.4** / react-dom 19.2.4 |
+| Language | TypeScript 5 (`strict: true`, `@/*` → `src/*`) |
+| Styling | **Tailwind CSS v4** via `@tailwindcss/postcss` — **no `tailwind.config.js` exists** |
+| Testing | **Jest 30.3** + ts-jest 29.4 + **React Testing Library 16.3** + jest-environment-jsdom 30 + user-event 14.6 |
+| Runtime dep | `uuid` v13 (the only one) |
+| HTTP | native `fetch` |
+| Absent | no database, no ORM, no ESLint config, no Prettier config, no CI |
+
+> ⚠️ **`docs/architecture/tech-stack.md` is stale** — it documents Next.js 14+, React 18+,
+> Tailwind 3+, Node 18+, and claims ESLint + Prettier. Trust `package.json`, not that doc.
+> Note also that **Next.js 16 requires Node 20.9+**; Node 18 is unsupported.
+
+**Key constraints**
+- MVola credentials (`MVOLA_CONSUMER_KEY` / `MVOLA_CONSUMER_SECRET`) are server-only,
+  read exclusively inside `src/lib/mvola/`. Never `NEXT_PUBLIC_`.
+- Money is **integer Ariary** internally; stringified only at the `client.ts` HTTP edge.
+- Every wallet mutation must be **idempotent** — the status poll and the webhook can both
+  settle the same transaction.
+- `MVOLA_ENV` selects the base URL and **nothing else** (project rule R2).
+- Sandbox transactions settle only after a **manual approval** in MVola's developer portal.
+- All state is in-memory and resets on server restart.
+
+**Docs & plans**
+- Architecture: `docs/architecture/` — `overview.md`, `folder-structure.md`,
+  `tech-stack.md`, `configuration.md`, `dev-guide.md`, `state-management.md`,
+  `_shared.md`, plus one self-contained doc per feature at
+  `docs/architecture/features/<slug>/index.md` (index: `docs/architecture/README.md`).
+- Plans: `tasks/2026-04-16_mvola-prof/` (epics + stories), routed via `tasks/FEATURE_INDEX.md`.
+- MVola reference: `docs/API_MerchantPay.pdf`, `docs/mvola-reference/`.
+- House rules: `/guide-conventions` (`.claude/skills/guides/conventions/SKILL.md`) — **authoritative; wins on conflict**.
 
 ## Coding Conventions
 
-### File & Folder Naming (App Router)
+### Naming
+- Route Handler files are always named `route.ts` inside the folder that encodes the
+  path; the folder — not the file — carries the meaning (`api/mvola/status/[correlationId]/route.ts`).
+- Dynamic segment folders use `[param]` brackets matching the destructured name exactly
+  (`[correlationId]`, `[msisdn]`) — Next generates the `RouteContext<'…'>` type from this
+  literal, so the folder name and the destructured property name must agree.
+- Exported HTTP method handlers are the literal uppercase verb: `GET`, `POST`, `PUT`,
+  `DELETE`, `PATCH`. `OPTIONS` is auto-implemented if omitted — do not hand-write it
+  unless you need non-default behavior.
 
-Special files Next.js recognizes inside `src/app/`:
+### File Organization
+- Route Handlers under `src/app/api/**` only orchestrate: parse the request, call into
+  `src/lib/mvola/*` or `src/lib/store/*`, shape the response. No MVola HTTP calls or
+  business logic inline in `route.ts`.
+- Each route's tests live alongside it in `__tests__/route.test.ts`
+  (e.g. `src/app/api/mvola/withdraw/__tests__/route.test.ts`), matching the existing
+  layout for `callback`, `deposit`, `withdraw`, `coinflip`, `wallet/[msisdn]/balance`.
+- `src/lib/mvola/` is the only place that imports MVola credentials; `src/lib/store/`
+  is the only place that touches the `Map` singletons directly — routes call typed
+  accessors, never `wallets.set(...)` inline.
 
-| File | Purpose |
-|------|---------|
-| `layout.tsx` | Shared layout wrapping pages |
-| `page.tsx` | Routable page (UI) |
-| `route.ts` | API endpoint (Route Handler) |
-| `loading.tsx` | Loading UI |
-| `error.tsx` | Error boundary UI |
-| `not-found.tsx` | 404 UI |
+### Code Style
+- Handlers are `async function GET/POST/PUT(...)` returning `Promise<NextResponse>` —
+  match the explicit return type already used in `status/[correlationId]/route.ts` and
+  `wallet/[msisdn]/balance/route.ts`.
+- JSDoc block above every exported handler describing params, side effects, and each
+  possible status code — see the existing routes for the expected level of detail.
+- Errors are caught explicitly inside the handler body and turned into a `NextResponse`
+  with an appropriate status; never let a Route Handler throw uncaught.
 
-Project layout (per `docs/architecture/folder-structure.md`):
-- `src/app/page.tsx` → `/`
-- `src/app/api/mvola/withdraw/route.ts` → `POST /api/mvola/withdraw`
-- `src/app/api/mvola/status/[correlationId]/route.ts` → `GET /api/mvola/status/:correlationId`
-
-### Server vs. Client Components
-
-- **Default = Server Component.** Runs on the server, no JS shipped to the browser.
-- **Add `"use client"` only when you need:** `useState`, `useEffect`, browser APIs, event handlers, refs.
-- **Push `"use client"` as deep in the tree as possible** — keep parents as Server Components to ship less JS.
-
-In this project:
-- `src/app/page.tsx` — **Server Component** (just renders the form)
-- `src/app/layout.tsx` — **Server Component**
-- `src/components/WithdrawForm.tsx` — **Client Component** (`"use client"` — needs `useState` + polling)
+> `/guide-conventions` (`.claude/skills/guides/conventions/SKILL.md`) holds this project's
+> house rules and **wins on conflict** with anything generic in this guide.
 
 ## Patterns to Follow
 
-### Route Handler — Basic POST
+### Async `params` in Route Handlers (the single most important Next 16 change)
 
-```ts
-// src/app/api/mvola/withdraw/route.ts
-import { NextRequest } from "next/server";
-
-export async function POST(request: NextRequest) {
-  const body = await request.json();
-  // ... handle
-  return Response.json({ correlationId: "abc-123" });
-}
-```
-
-### Route Handler — Dynamic Segment
-
-In Next.js 15+, `params` is a `Promise` and must be awaited. Next.js 14 still
-allows the synchronous form, but **prefer the awaited form** to be forward-compatible.
+`params` (and `searchParams`) are **Promises**, not plain objects — every 14-era
+synchronous destructure is broken. This project's dynamic routes already do it right:
 
 ```ts
 // src/app/api/mvola/status/[correlationId]/route.ts
 export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ correlationId: string }> },
-) {
+  _req: NextRequest,
+  { params }: { params: Promise<{ correlationId: string }> }
+): Promise<NextResponse> {
   const { correlationId } = await params;
-  // ... fetch status
-  return Response.json({ transactionStatus: "pending" });
+  // ...
 }
 ```
 
-### Route Handler — Webhook (return 200 even on error)
+The same shape (`interface RouteContext { params: Promise<{ msisdn: string }> }`) is used
+in `src/app/api/wallet/[msisdn]/balance/route.ts`. Both are valid: a hand-written
+`{ params: Promise<{...}> }` type, or Next's **generated global type**
+`RouteContext<'/api/mvola/status/[correlationId]'>` (emitted into `.next/types` by
+`next dev`/`next build`/`next typegen`, no import needed) — prefer the generated form for
+any *new* dynamic route once the folder exists and typegen has run. Route Handlers get
+**no** `searchParams` argument at all — read `request.nextUrl.searchParams` instead.
 
-Third-party callers retry on non-2xx. Always return 200 once received and parsed,
-even if downstream handling fails — log the failure separately.
+### No cache config on any route in this project
+
+GET Route Handlers and server-side `fetch()` are **not cached by default** in 15/16 —
+inverted from Next 14. This project never needs to opt in: status polling, balance,
+history, and the callback are all inherently per-request, per-user data.
 
 ```ts
-// src/app/api/mvola/callback/route.ts
-export async function PUT(request: Request) {
+// Correct for every route in src/app/api/** — no dynamic/revalidate export at all
+export async function GET(request: NextRequest, context: RouteContext) { /* ... */ }
+```
+
+### Explicit `nodejs` runtime on every MVola route
+
+```ts
+export const runtime = "nodejs"; // reads process.env secrets; may need Node crypto
+```
+
+Add this to every route under `src/app/api/mvola/**`. `nodejs` is already the default,
+but state it explicitly on routes that read secrets or (for `callback/route.ts`) may
+later need Node's `crypto.timingSafeEqual` for signature verification — `edge`'s Web
+Crypto subset and partial `process.env` access make it the wrong choice here.
+
+### `server-only` guard on secret-reading modules
+
+```ts
+// src/lib/mvola/auth.ts — add this import
+import "server-only";
+
+const secret = process.env.MVOLA_CONSUMER_SECRET;
+```
+
+`server-only` no-ops under the server bundler condition and **throws at import time**
+under the client condition — a silent secret leak becomes a build error instead.
+`src/lib/mvola/auth.ts` currently reads `process.env.MVOLA_CONSUMER_KEY` without this
+guard; add it.
+
+### Idempotent webhook handling (module-level state)
+
+`src/app/api/mvola/callback/route.ts` already models the right shape: always parse
+defensively, always return 200, delegate the actual settlement to
+`reconcileTransaction()` so the callback and the status-poll route (which can both
+reach the same terminal transition) don't double-credit a wallet.
+
+```ts
+export async function PUT(req: NextRequest): Promise<NextResponse> {
   try {
-    const text = await request.text();
-    console.log("MVola callback:", text);
+    const body = await req.json();
+    const record = getTransactionByCorrelationId(body?.serverCorrelationId);
+    if (record) reconcileTransaction(record, body.transactionStatus, body.transactionReference);
   } catch (err) {
-    console.error("Failed to read callback body", err);
+    console.error("[mvola/callback] Unhandled error parsing body", err);
   }
-  return new Response("OK", { status: 200 });
+  return NextResponse.json({ received: true }, { status: 200 }); // always 200
 }
 ```
 
-### Returning JSON
+For a webhook that ever needs signature verification, read the body **once** and in the
+right order: `await request.text()` first for HMAC verification, then `JSON.parse` the
+same string — never call `.json()` and then `.text()` on the same request.
 
-Use the static `Response.json()` helper:
+### Module-level `Map` singletons under dev HMR
 
-```ts
-return Response.json({ ok: true });
-return Response.json({ error: "bad input" }, { status: 400 });
-```
-
-### Environment Variables
-
-- **Server-only (default):** `process.env.MVOLA_CONSUMER_KEY` — only available in server code (Route Handlers, Server Components, `src/lib/`)
-- **Client-exposed:** Must be prefixed `NEXT_PUBLIC_*` and is **inlined into the JS bundle at build time** — visible to any browser
-- **NEVER prefix MVola credentials with `NEXT_PUBLIC_`** — that would publish them
-- `.env.local` for development (gitignored); platform env vars in production (Vercel dashboard, etc.)
+`src/lib/store/wallets.ts`, `transactions.ts`, and `games.ts` rely on a bare
+`new Map()` at module scope. Next.js guarantees the module evaluates once per worker in
+a long-lived process, but **dev HMR (Turbopack) can re-evaluate the module on edit**,
+silently resetting the wallet/transaction/game state mid-session. Guard it via
+`globalThis` so a HMR reload reuses the existing map instead of creating a fresh one:
 
 ```ts
-// GOOD — used inside src/lib/mvola/auth.ts (server-only)
-const key = process.env.MVOLA_CONSUMER_KEY;
-if (!key) throw new Error("MVOLA_CONSUMER_KEY not set");
-
-// BAD — never put secrets here, never read in a "use client" file
-const key = process.env.NEXT_PUBLIC_MVOLA_CONSUMER_KEY;
+const g = globalThis as unknown as { __wallets?: Map<string, WalletState> };
+const wallets = g.__wallets ?? (g.__wallets = new Map());
 ```
 
-### Path Aliases
-
-Use `@/` to import from `src/`:
-
-```ts
-import { getToken } from "@/lib/mvola/auth";
-import type { MVolaToken } from "@/lib/mvola/types";
-```
-
-### Runtime Selection
-
-Route Handlers run on the Node.js runtime by default — required here because
-the MVola client uses `Buffer` and reads `process.env`. **Do not opt into Edge runtime**
-for these routes (`export const runtime = "edge"` would break things).
+This does **not** fix multi-worker/serverless isolation — each worker still gets its own
+`Map` — but that's an accepted limitation of this proof-of-concept, not something to
+"fix" with a database here.
 
 ## Anti-Patterns to Avoid
 
-### Calling MVola directly from a Client Component
-- **What:** `fetch("https://devapi.mvola.mg/...")` from `WithdrawForm.tsx`
-- **Why bad:** Exposes credentials and CORS will fail
-- **Instead:** Always go through `/api/mvola/*` server routes
+### Synchronous `params` destructure
+- **WRONG:** `export async function GET(req, { params }: { params: { id: string } }) { const id = params.id; }`
+- **RIGHT:** `const { correlationId } = await context.params;` (see `status/[correlationId]/route.ts`)
+- **WHY:** `params` is a `Promise` in Next 15/16. Synchronous property access yields
+  `undefined` or a TypeError, not the value.
 
-### Putting `"use client"` at the top of `app/layout.tsx`
-- **What:** Marks the entire app as client-rendered
-- **Why bad:** Ships all components as JS, loses RSC benefits
-- **Instead:** Keep layouts as Server Components; mark only leaf interactive components as client
+### Adding cache config "for performance" to a polling route
+- **WRONG:** `export const revalidate = 60;` on `status/[correlationId]/route.ts` or `wallet/[msisdn]/balance/route.ts`
+- **RIGHT:** No cache config at all — GET handlers are dynamic by default in Next 16.
+- **WHY:** Serves stale MVola status; the client's poll loop would show `pending` forever
+  even after MVola settles the transaction.
 
-### `NEXT_PUBLIC_` on a secret
-- **What:** `NEXT_PUBLIC_MVOLA_CONSUMER_KEY=...`
-- **Why bad:** Inlined into the browser bundle — anyone can read it
-- **Instead:** No prefix; access only from server-only files
+### Secret-reading module without `server-only`
+- **WRONG:** `src/lib/mvola/auth.ts` reading `process.env.MVOLA_CONSUMER_SECRET` with no `import "server-only"` guard
+- **RIGHT:** `import "server-only";` at the top of every file in `src/lib/mvola/` that reads credentials
+- **WHY:** A future transitive import from a `"use client"` component would silently
+  bundle the secret into browser JS; `server-only` turns that into a build-time throw.
 
-### Forgetting to `await params`
-- **What:** `const id = params.correlationId` (sync) in a Next.js 15+ codebase
-- **Why bad:** Will start logging warnings, then break in a future version
-- **Instead:** `const { correlationId } = await params;`
+### Edge runtime on the callback webhook
+- **WRONG:** `export const runtime = "edge";` on `src/app/api/mvola/callback/route.ts`
+- **RIGHT:** `export const runtime = "nodejs";`
+- **WHY:** Signature verification (when added) needs Node's `crypto.timingSafeEqual`;
+  Edge's Web Crypto subset and partial `process.env` access make it the wrong runtime
+  for a credential-reading webhook.
 
-### Dynamic `import()` of server-only code from a client component
-- **What:** Importing `src/lib/mvola/auth.ts` into `WithdrawForm.tsx`
-- **Why bad:** Bundles secret-reading code into the browser
-- **Instead:** Client only talks to `/api/mvola/*` routes
+### `NEXT_PUBLIC_` on an MVola credential
+- **WRONG:** `NEXT_PUBLIC_MVOLA_CONSUMER_KEY=...` in `.env.local`
+- **RIGHT:** `MVOLA_CONSUMER_KEY=...` (no prefix), read only inside `src/lib/mvola/`
+- **WHY:** `NEXT_PUBLIC_`-prefixed vars are inlined into the browser bundle at build
+  time — anyone opening devtools reads the credential.
+
+### Hand-writing `RouteContext<'…'>` for a route that doesn't exist yet
+- **WRONG:** Typing a new handler against `RouteContext<'/api/wallet/[msisdn]/reset'>` before the folder exists
+- **RIGHT:** Scaffold the folder and `route.ts` first, run `next dev` (or `next typegen`), then reference the generated literal
+- **WHY:** The type is generated from the real filesystem routes in `.next/types`; it
+  does not exist until the route does.
+
+### Reading secrets on Edge or relying on `serverRuntimeConfig`
+- **WRONG:** `import getConfig from "next/config"; const { serverRuntimeConfig } = getConfig();`
+- **RIGHT:** `process.env.MVOLA_CONSUMER_KEY` inside a `server-only`-guarded module, with `runtime = "nodejs"`
+- **WHY:** `serverRuntimeConfig`/`publicRuntimeConfig` were **removed in Next 16** —
+  `process.env` + `NEXT_PUBLIC_` is the only mechanism left.
 
 ## Performance Best Practices
 
-- Keep client bundles small — most of the app is Server Components
-- Use `loading.tsx` for streaming UI on slow data fetches
-- Cache aggressively only when data is shared and safe — MVola transaction status is **per-user, never cache**
-- For polling APIs (status route), set `cache: "no-store"` if you ever fetch from a Server Component (here we fetch from the client, so N/A)
+- Do not add `dynamic`, `revalidate`, or `generateStaticParams` to any route under
+  `src/app/api/**` — every response here is per-user, per-request MVola or wallet state.
+- Client bundles stay small by default: `src/app/page.tsx` and `src/app/layout.tsx` are
+  Server Components; only leaf components needing `useState`/polling
+  (`DepositForm`, `CashOutForm`, `CoinFlipGame`, `TransactionHistory`) carry `"use client"`.
+- Turbopack is the default dev bundler in Next 16 — no `--turbo` flag, and no
+  `experimental.turbo` key (renamed to top-level `turbopack` in `next.config.ts`).
+- `cacheComponents` (replaces `experimental.ppr`/`dynamicIO`/`useCache`) is **not
+  relevant here** — it also disables `runtime = "edge"`, and every route is intentionally
+  dynamic anyway.
 
 ## Security Best Practices
 
-- All MVola env vars: server-only, no `NEXT_PUBLIC_` prefix
-- Validate request bodies at Route Handlers — return 400 on missing/invalid fields
-- For webhook routes, verify origin if MVola provides a signature header (currently spec doesn't — flag as production gap)
-- Never log `process.env.MVOLA_CONSUMER_KEY` or full bearer tokens
+- MVola credentials never leave `src/lib/mvola/`; guard every file that reads them with
+  `import "server-only"` (see Patterns to Follow above).
+- Validate request bodies in every Route Handler; return 400 on missing/invalid fields
+  before touching `src/lib/store/*` or calling MVola.
+- The callback route always returns 200, even on parse/reconciliation failure, to avoid
+  MVola retry-storming — but must never let an uncaught throw produce an unlogged 500.
+- Never log full bearer tokens or raw credential values —
+  `src/app/api/mvola/callback/route.ts` logs only `serverCorrelationId`/`transactionStatus`.
+- `runtime = "nodejs"` (not `edge`) on every route reading `process.env` secrets or
+  needing Node `crypto` for webhook signature checks.
 
 ## Testing Conventions
 
-- Route Handlers can be tested by importing the exported function and calling it with a constructed `Request`:
-  ```ts
-  import { POST } from "@/app/api/mvola/withdraw/route";
+- Jest 30.3 + ts-jest + React Testing Library 16.3 + jest-environment-jsdom 30 +
+  user-event 14.6, per `package.json` — no separate Next-specific test runner.
+- Route Handler tests import the exported `GET`/`POST`/`PUT` directly and invoke it with
+  a hand-built `NextRequest`, passing `{ params: Promise.resolve({ ... }) }` for dynamic
+  routes — this project does not use `next-test-api-route-handler`; stay consistent with
+  the existing files.
+- Test files live in `__tests__/route.test.ts` next to the `route.ts` they cover.
 
-  it("returns 400 when amount is missing", async () => {
-    const req = new Request("http://test/api/mvola/withdraw", {
-      method: "POST",
-      body: JSON.stringify({ playerMsisdn: "0343500003" }),
-    });
-    const res = await POST(req as any);
-    expect(res.status).toBe(400);
-  });
-  ```
-- E2E: Playwright against `npm run dev` on port 3000
+```ts
+// pattern used by src/app/api/wallet/[msisdn]/balance/__tests__/route.test.ts
+import { NextRequest } from "next/server";
+import { GET } from "@/app/api/wallet/[msisdn]/balance/route";
 
-## Build & Tooling
-
-- `npm run dev` — dev server with hot reload
-- `npm run build` — production build (`.next/` output)
-- `npm start` — run the production server
-- `npm run lint` — Next.js's ESLint preset
-- `npx tsc --noEmit` — typecheck
+it("returns balance 0 for an unseen msisdn", async () => {
+  const req = new NextRequest("http://test/api/wallet/0343500003/balance");
+  const res = await GET(req, { params: Promise.resolve({ msisdn: "0343500003" }) });
+  expect(res.status).toBe(200);
+  expect(await res.json()).toMatchObject({ balance: 0, updatedAt: null });
+});
+```
 
 ## Framework-Specific Guidelines
 
-### Webhook Callback URL in Local Dev
-- MVola needs a public URL to PUT the callback
-- Use ngrok: `ngrok http 3000`, then set `MVOLA_CALLBACK_URL=https://xxxxx.ngrok.io/api/mvola/callback`
-- See `docs/architecture/dev-guide.md`
+### Removed / renamed going from 14 to 16 (silent breakage risks)
+1. **Node 18 is unsupported** — Next 16 requires **Node 20.9+** and TypeScript 5.1+.
+2. `params`/`searchParams` are Promises everywhere, including `generateMetadata`.
+3. GET Route Handlers and `fetch()` are no longer cached by default (see above).
+4. `serverRuntimeConfig`/`publicRuntimeConfig` — removed; use `process.env`/`NEXT_PUBLIC_`.
+5. `experimental.ppr`/`dynamicIO`/`useCache` — removed, merged into top-level
+   `cacheComponents`; using the old experimental flags throws a build error.
+6. `experimental.turbo` → top-level `turbopack` key in `next.config.ts`.
+7. `middleware.ts` → `proxy.ts` (export renamed to `proxy`); `middleware.ts` still works
+   but is deprecated. Proxy runtime is fixed to `nodejs`.
+8. `next/legacy/image` — removed entirely.
+9. AMP support (`next/amp`, `useAmp`) — fully removed.
+10. Turbopack is now the **default** dev bundler (was the `--turbo` opt-in flag in 14).
 
-### Avoid Next.js Caching for MVola Calls
-- All MVola fetches are dynamic per-user — pass `cache: "no-store"` to any server-side `fetch()` of MVola
-- (In this project, MVola is called from Route Handlers, which are dynamic by default — but be explicit)
+Bulk-migrate any straggling synchronous `params` usage with:
+`npx @next/codemod@latest next-async-request-api .`
+
+### Error handling in Route Handlers
+There is no `error.tsx` equivalent for Route Handlers — an uncaught throw yields a
+generic 500 with no body. `notFound()`/`redirect()` from `next/navigation` are
+page/layout-only and must not be called from a `route.ts`. Every route in this project
+catches explicitly and returns a shaped `NextResponse`, as in
+`status/[correlationId]/route.ts`'s `catch (err) { ... return NextResponse.json({ error: message }, { status: 502 }); }`.
+
+This guide is used by /expert-backend and /expert-frontend for Next.js-specific guidance.
 
 ## References
 
-- Official docs: https://nextjs.org/docs
-- Route Handlers: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
-- Project: `docs/architecture/components.md`, `docs/architecture/api-contracts.md`
-
-This guide is used by **/expert-frontend** (page, layout, client components) and **/expert-backend** (Route Handlers, env vars).
+- https://nextjs.org/docs/app/api-reference/file-conventions/route
+- https://nextjs.org/docs/app/getting-started/route-handlers
+- https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config/runtime
+- Next.js upgrade guides: version-15.mdx, version-16.mdx (via context7 `/vercel/next.js`)
+- `docs/architecture/tech-stack.md` (stale — see Project Context above), `docs/architecture/dev-guide.md`, `docs/architecture/configuration.md`
+- `.claude/skills/guides/conventions/SKILL.md` (`/guide-conventions` — authoritative on conflict)
