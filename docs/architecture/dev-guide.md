@@ -323,9 +323,8 @@ npm start
 
 ## Troubleshooting
 
-### Predictable live-run failures (story 09-14)
-
-The four failures most likely to interrupt a live sandbox run, in the order to check them:
+The four failures most likely to interrupt a live sandbox run (story 09-14), in the order to
+check them, followed by the rest of the general-purpose entries.
 
 ### Tunnel expired (ngrok URL no longer resolves or changed)
 
@@ -338,7 +337,7 @@ The four failures most likely to interrupt a live sandbox run, in the order to c
   at the tunnel at all, which narrows this down from "MVola isn't calling us" to "our tunnel
   is down"
 
-### Credentials rejected
+### Credentials rejected (`401 Unauthorized` from MVola)
 
 - Symptom: `npm run preflight` fails the "MVola credentials" check, or `401 Unauthorized`
   appears in the server log
@@ -349,40 +348,34 @@ The four failures most likely to interrupt a live sandbox run, in the order to c
 
 ### Transaction stuck pending
 
-- Symptom: the pending banner never clears after what should have been an approval
-- Most likely cause, in order: **(1)** it has not actually been approved yet — return to the
-  portal's transaction-approvals page; **(2)** the approval was performed on a *different*
-  transaction than the one being watched — cross-check the correlation ID shown in the UI
-  against the one approved in the portal; **(3)** the callback cannot reach the server (see
-  "callback never arrives" below) but polling should still catch the settlement within
-  `MVOLA_POLL_INTERVAL_MS` regardless
-- Reaching `MVOLA_POLL_TIMEOUT_MS` reports **still pending**, never failure — the wallet
-  never moves on a client-side timeout, and reloading resumes polling
+This is usually correct behaviour, not a bug — sandbox transactions settle only after a
+manual approval. Most likely cause, in order:
+- **It has not actually been approved yet** — return to the portal's transaction-approvals
+  page
+- **The approval was performed on a *different* transaction** than the one being watched —
+  cross-check the correlation ID shown in the UI against the one approved in the portal
+- **The callback cannot reach the server** (see "callback never arrives" below) — but
+  polling should still catch the settlement within `MVOLA_POLL_INTERVAL_MS` regardless
+- **Polling stopped** — the UI stops asking at `MVOLA_POLL_TIMEOUT_MS`. That reports *still
+  pending*, never failure — the wallet never moves on a client-side timeout; reload to
+  resume, or raise the ceiling
 
 ### Callback never arrives
 
-- Symptom: the transaction eventually settles by poll, but the ngrok inspector shows no
-  `PUT /api/mvola/callback` request at all
+- Symptom: the transaction eventually settles by poll, but the ngrok inspector at
+  `http://localhost:4040` shows no `PUT /api/mvola/callback` request at all
 - Fix: confirm `MVOLA_CALLBACK_URL` in `.env.local` matches the tunnel's current address
-  exactly, including the `/api/mvola/callback` path; re-run `npm run preflight`, which
-  specifically checks this address is reachable from outside the process
+  exactly, including the `/api/mvola/callback` path; restart ngrok and update the URL if it
+  changed; re-run `npm run preflight`, which specifically checks this address is reachable
+  from outside the process
 - This is not fatal to the walkthrough — status polling reaches the same settled state
   independently (rule R4) — but the callback body is one of the required captures for this
   story, so it must be resolved before the run counts as complete for AC purposes
-
-### `401 Unauthorized` from MVola
-- Check `MVOLA_CONSUMER_KEY` and `MVOLA_CONSUMER_SECRET` are correct
-- Verify you are using the right environment (`MVOLA_ENV=sandbox`)
 
 ### `400 Bad Request` from MVola
 - Ensure `MVOLA_MERCHANT_MSISDN` is a valid merchant number registered in the portal
 - Verify `playerMsisdn` uses the sandbox test number (`0343500003`)
 - Check `amount` is a string, not a number
-
-### MVola callback never arrives
-- Confirm `MVOLA_CALLBACK_URL` points to a publicly accessible URL (ngrok)
-- Restart ngrok and update `MVOLA_CALLBACK_URL` if the URL changed
-- Check ngrok web interface at `http://localhost:4040` to inspect incoming PUT requests
 
 ### Token expired errors in logs
 - The in-memory token cache is reset on every server restart
@@ -391,16 +384,6 @@ The four failures most likely to interrupt a live sandbox run, in the order to c
 ### `409 Insufficient funds` from `/api/game/coinflip` or `/api/mvola/withdraw`
 - The in-memory wallet was wiped by a server restart — deposit again before playing or cashing out
 - Or the bet/cash-out exceeds the current balance — call `GET /api/wallet/:msisdn/balance` to confirm
-
-### A transaction stays `pending`
-This is usually correct behaviour, not a bug. Sandbox transactions settle only after a
-manual approval. In order of likelihood:
-- **It has not been approved yet** — approve it on the MVola developer portal's
-  transaction-approvals page
-- **The callback cannot reach you** — `MVOLA_CALLBACK_URL` is stale or ngrok is down; check
-  ngrok's inspector at `http://localhost:4040`, and run `npm run preflight`
-- **Polling stopped** — the UI stops asking at `MVOLA_POLL_TIMEOUT_MS`. That reports *still
-  pending*, not failure; reload to resume, or raise the ceiling
 
 ### Wallet balance seems stuck after a deposit
 - Deposits only credit the wallet when MVola confirms `completed` (via status poll or the webhook). Check:

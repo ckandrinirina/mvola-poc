@@ -229,11 +229,24 @@ Retrieve MVola's authoritative record of a settled transaction alongside the loc
 ```
 
 > The exact key set inside `mvola` is whatever MVola returns and is forwarded unaltered —
-> the fields above are indicative. The response is **not** reshaped to match the local
-> record; making the two look alike would defeat the comparison.
+> the fields above are indicative **shape only, not a capture**. The response is **not**
+> reshaped to match the local record; making the two look alike would defeat the comparison.
 
 **Response (404):** `{ "error": "No local transaction carries that reference" }`
 **Response (502):** `{ "error": "MVola API error", "details": "..." }`
+
+**Observed key set — first successful call (live capture):**
+
+```
+PASTE THE OBSERVED KEY SET HERE — DO NOT FILL IN BY HAND.
+Captured during the docs/architecture/dev-guide.md "Live Sandbox Walkthrough" runbook
+(story 09-14), step 5, from a real GET /api/mvola/transaction/{reference} response after
+a settled deposit. Record the key names present in the real `mvola` object (redact MSISDN
+values in debitParty/creditParty — keep only the last 3 digits).
+```
+
+This block remains empty until story 09-14's live run produces a settled transaction
+reference and successfully calls this route with it.
 
 ### GET `/api/mvola/status/[correlationId]` (changed)
 
@@ -395,17 +408,35 @@ environment, and the refund-on-rejection path behind step 7b.
 
 ## Open items
 
-- **Callback payload field names — unverified.** No live MVola webhook delivery is captured
-  in this repo, so it is not known whether the callback uses `status`/`objectReference` (as
-  the status response does) or `transactionStatus`/`transactionReference` (as the current
-  code and `_shared.md` assume). `parseMvolaStatus()` accepts both, so this does not block
-  the work. Capture one real delivery during the first end-to-end sandbox run and record the
-  observed shape in [\_shared.md](../../_shared.md#shared-message-formats); the redundant
-  fallback can then be removed.
-- **Details response shape — indicative.** The `mvola` object in the details response is
-  forwarded verbatim; the fields shown above are drawn from the operation's purpose, not
-  from a captured 200. The details call was rejected during verification because no settled
-  reference existed to call it with. Confirm the real key set on the first successful call.
+Restated as of story 09-14's documentation pass — **both remain open**. Neither can be
+closed by writing; both require the operator to actually drive the sandbox walkthrough in
+`docs/architecture/dev-guide.md` § Live Sandbox Walkthrough — Operator Runbook and paste the
+result into the slots that pass has prepared:
+
+- **Callback payload field names — still unverified.** No live MVola webhook delivery has
+  been captured in this repo. It is still unknown whether the callback uses
+  `status`/`objectReference` (as the status response does) or
+  `transactionStatus`/`transactionReference` (as the current code and `_shared.md` assume).
+  `parseMvolaStatus()` accepts both, so this does not block correctness — only the removal
+  of the redundant fallback is blocked on it. An empty, clearly-labelled capture slot now
+  exists at [\_shared.md § Shared message formats](../../_shared.md#shared-message-formats);
+  it must be filled from a real `PUT /api/mvola/callback` delivery, observed via the ngrok
+  inspector, before this item can close.
+- **Details response shape — still indicative.** The `mvola` object in the details response
+  above is forwarded verbatim; its fields are drawn from the operation's purpose, not from a
+  captured 200. The details call was rejected during the 2026-07-28 verification because no
+  settled transaction reference existed to call it with. An empty capture slot now exists
+  directly below the [details API response](#get-apimvolatransactiontransactionreference-new)
+  above; it must be filled from a real successful call before this item can close.
+
+**Additional finding from this pass (not part of either Open item above, flagged for
+whoever picks this up next):** `grep -rn "MVOLA_ENV" src/` does **not** currently return only
+`client.ts::getBaseUrl()` as rule R2 requires — `src/lib/mvola/auth.ts:55`
+(`const env = process.env.MVOLA_ENV;`, used at `auth.ts:57-58` to compute its own token-endpoint
+base URL) reads `MVOLA_ENV` independently of `client.ts::getBaseUrl()`. This is a real R2 gap
+in `src/`, out of this story's file scope to fix (this story touches only
+`docs/architecture/*`), and should be raised as a follow-up fix before the epic is
+considered structurally complete.
 
 ## Shared dependencies
 
