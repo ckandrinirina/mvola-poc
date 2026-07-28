@@ -86,12 +86,21 @@ export function checkEnvVars(env) {
   };
 }
 
-/** Check 2: request a real MVola access token — proves the credentials are live. */
+/**
+ * Check 2: request a real MVola access token — proves the credentials are live.
+ *
+ * `MVOLA_TOKEN_BASE_URL` is a test-only escape hatch (never documented as a
+ * required var, never part of `REQUIRED_VARS`): it lets a hermetic test point
+ * this check at a non-resolving host instead of the real MVola token endpoint,
+ * without the test importing this module. Real demo runs never set it, so
+ * production behavior is unchanged.
+ */
 export async function checkCredentials(env) {
   const baseUrl =
-    env.MVOLA_ENV === "production"
+    process.env.MVOLA_TOKEN_BASE_URL ||
+    (env.MVOLA_ENV === "production"
       ? "https://api.mvola.mg"
-      : "https://devapi.mvola.mg";
+      : "https://devapi.mvola.mg");
   const credentials = Buffer.from(
     `${env.MVOLA_CONSUMER_KEY ?? ""}:${env.MVOLA_CONSUMER_SECRET ?? ""}`
   ).toString("base64");

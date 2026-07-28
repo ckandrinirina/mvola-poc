@@ -139,24 +139,32 @@ running the script directly under many env combinations (no vars, partial vars,
 unreachable/invalid DNS, reachable domain, path/query/userinfo-embedded secrets,
 malformed URLs) and by invoking the exported pure functions directly.
 
-A regression test was added afterward at `scripts/__tests__/preflight.test.ts` covering
-`maskUrl` (path secret, query secret, userinfo, malformed URL, path-present vs. no-path
-display) and `maskMsisdn` (normal value, 3-char, 1-char, empty) — every assertion checks
-that the planted sentinel does NOT appear in the returned string. **This file is
-discovered by Jest's `testMatch` (confirmed via `--listTests`) but its tests are
-`.skip`ped**: `scripts/preflight.mjs` is real ESM, and `jest.config.ts` (shared, outside
-this story's scope) only transforms `.tsx?` files with no ESM support configured — both a
-static `import` and a dynamic `import()` of the real `.mjs` file fail identically with
-`SyntaxError: Cannot use import statement outside a module`. Making the file run would
-require editing `jest.config.ts`, which this story is not permitted to touch; the test
-file documents this at its top and is ready to be un-skipped the moment that changes.
+A regression test was first attempted at `scripts/__tests__/preflight.test.ts` by
+importing (`import` / dynamic `import()`) the module directly — both forms failed
+identically with `SyntaxError: Cannot use import statement outside a module`, because
+`scripts/preflight.mjs` is real ESM and `jest.config.ts` (shared, outside this story's
+scope) only transforms `.tsx?` with no ESM support configured. Rather than edit that
+shared config, the test was rewritten to spawn the real script as a child process
+(`node:child_process` `spawnSync`) and assert on its actual stdout+stderr — end-to-end
+coverage of what a demo presenter would actually see, and strictly more representative
+than unit-testing the masking helpers in isolation. It **runs** (no `.skip`), covers a
+path-embedded secret, a userinfo+query secret, a malformed URL, MSISDN masking (normal,
+2-char, empty), and consumer key/secret, and is fully hermetic: every host is
+`example.invalid` (RFC 2606 reserved, guaranteed non-resolving); a new
+`MVOLA_TOKEN_BASE_URL` test-only override (never a required var, never documented to
+demo operators) redirects the credentials check's OAuth request away from the real
+`devapi.mvola.mg`; every spawn has an 8s timeout; the child's `cwd` is the OS temp dir so
+it can never pick up a real `.env`.
 
 QA (`ck-code:qa-validator`) independently re-ran the round-1 checks and the full Jest
-suite (443 passed / 0 failed) and returned **PASS** on all 11 acceptance criteria before
-round 2's adversarial re-check found the path-masking gap.
+suite and returned **PASS** on all 11 acceptance criteria before round 2's adversarial
+re-check found the path-masking gap; the coordinator's final round then required the
+subprocess rewrite above. Final full-suite state: 27 suites / 451 tests, all passed, 0
+failed, 0 skipped.
 
 **Files Touched:**
 - CREATED: `scripts/preflight.mjs`
+- CREATED: `scripts/__tests__/preflight.test.ts` (hermetic subprocess regression test)
 - MODIFIED: `package.json:11` (added `"preflight"` script entry)
 - MODIFIED: `.env.example:19-24` (appended "Preflight" section; existing keys, including
   09-09's `MVOLA_POLL_INTERVAL_MS`/`MVOLA_POLL_TIMEOUT_MS`, left untouched)
