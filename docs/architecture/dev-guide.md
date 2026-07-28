@@ -74,30 +74,179 @@ npm run preflight
 
 Verifies the environment is set, the credentials still obtain a token, and
 `MVOLA_CALLBACK_URL` is reachable from outside the process. Exits non-zero with a one-line
-diagnosis per failure. Run it before any demonstration.
+diagnosis per failure. **Run it immediately before any live sandbox run or demonstration —
+it is the gate, not a suggestion.**
 
-## Demo Runbook
+> **What a green run proves — and does not.** A green `npm run preflight` proves three
+> things are true *right now*: every `MVOLA_*` variable is set, the credentials can obtain a
+> real access token, and something answers at `MVOLA_CALLBACK_URL` from outside this
+> process. It does **not** prove a transaction will actually settle end-to-end — that
+> depends on a human approving it in MVola's developer portal, which preflight cannot do and
+> does not check. A green preflight followed by a transaction that never settles almost
+> always means the approval step was skipped or performed on the wrong transaction, not that
+> preflight lied.
 
-The sequence to present to a reviewer. Steps 4 and 9 are performed **by you, in MVola's
-developer portal** — sandbox transactions do not settle on their own, and that manual
-approval is the most convincing part of the demonstration: a balance changing after an
-approval made elsewhere is something a local timer cannot imitate.
+## Live Sandbox Walkthrough — Operator Runbook
 
-| # | Step | Expected |
-|---|------|----------|
-| 0 | `npm run preflight` | All checks pass before the audience is watching |
-| 1 | Enter the player number (`0343500003`) in **WalletHeader** | Balance `0 Ar` |
-| 2 | **Deposit** tab → amount → Deposit | State `pending`, MVola correlation ID shown |
-| 3 | — | Pending banner names the approval step it is waiting for |
-| 4 | **Approve in the MVola portal's transaction-approvals page** | — |
-| 5 | Return to the app | Balance credited, state `completed` |
-| 6 | Expand the settled row in **History** | MVola's own record beside the local entry |
-| 7 | **Play** tab → bet, heads/tails | Balance moves on the outcome; no MVola involvement |
-| 8 | **Cash-out** tab → amount → Cash out | Funds reserved immediately, state `pending` |
-| 8b | *(optional)* **Reject** the approval instead | Wallet refunded; the failure path shown |
-| 9 | **Approve in the MVola portal** | — |
-| 10 | Return to the app | Cash-out `completed` |
-| 11 | **History** tab | Both payments and the game round, each traceable to MVola |
+This is the runbook for story 09-14: driving a real deposit and a real cash-out through the
+MVola sandbox, with both approvals performed by a human in MVola's developer portal, and
+capturing the real payloads MVola returns. **Nothing in this run may be simulated or
+fabricated** — the whole point is to observe what MVola actually sends.
+
+> **Nothing settles on its own.** The sandbox auto-complete shims that used to fake
+> settlement after a few seconds were removed in stories 09-05 and 09-15. Every transaction
+> in this walkthrough now sits `pending` until a human clicks Approve in MVola's developer
+> portal. If you do not know this going in, the app will look hung at steps 3 and 8 — it
+> is not; it is waiting for you.
+
+### 0. Prerequisites — obtaining and setting each variable
+
+Set these in `.env.local` (never commit it, never paste a secret *value* anywhere — screen,
+chat, doc, or commit message). `.env.example` lists the same keys with empty values as a
+template.
+
+| Variable | Where to get it | Notes |
+|---|---|---|
+| `MVOLA_CONSUMER_KEY` | MVola Developer Portal → your app → API keys | Secret — set only in `.env.local` |
+| `MVOLA_CONSUMER_SECRET` | Same screen, next to the consumer key | Secret — set only in `.env.local` |
+| `MVOLA_MERCHANT_MSISDN` | The sandbox merchant number assigned to your portal app | Not secret, but still an MSISDN — avoid pasting it into shared docs |
+| `MVOLA_PARTNER_NAME` | Whatever name you registered the app under in the portal | Sent as a header, not secret |
+| `MVOLA_COMPANY_NAME` | Same registration screen | Cosmetic only |
+| `MVOLA_ENV` | Literal value `sandbox` for this run | Only `client.ts::getBaseUrl()` reads this (rule R2) |
+| `MVOLA_CALLBACK_URL` | The public HTTPS URL your tunnel exposes, ending in `/api/mvola/callback` | See step 2 below — must be set *after* the tunnel is up |
+| `MVOLA_POLL_INTERVAL_MS` | Leave at default `3000` unless you have a reason to change it | |
+| `MVOLA_POLL_TIMEOUT_MS` | Leave at default `120000` (2 min) unless a prior run showed approvals routinely take longer — see the timing note at the end of this runbook | |
+
+### 1. Start the callback tunnel and set `MVOLA_CALLBACK_URL`
+
+```bash
+# Terminal 1 — keep this running for the whole session
+ngrok http 3000 --domain=your-reserved-domain.ngrok-free.app
+```
+
+Set `MVOLA_CALLBACK_URL=https://your-reserved-domain.ngrok-free.app/api/mvola/callback` in
+`.env.local`. A reserved domain keeps this URL stable across restarts — a free-tier random
+subdomain changes every time ngrok restarts, silently breaking the callback until preflight
+is re-run.
+
+Leave ngrok's local inspector open in a browser tab at `http://localhost:4040` — it is where
+you will read the raw callback payload in step 6 without adding any logging to the app.
+
+### 2. Start the app and run the gate
+
+```bash
+# Terminal 2
+npm run dev
+```
+
+```bash
+# Terminal 3 — the gate. Do not proceed past a red check.
+npm run preflight
+```
+
+If any check fails, stop here and see Troubleshooting below — do not start the walkthrough
+on a red preflight.
+
+### 3. The walkthrough
+
+Open `http://localhost:3000`. Steps marked **(portal)** are performed by you, in MVola's
+developer portal's transaction-approvals page — off-app, and the moments the whole
+demonstration depends on.
+
+| # | Step | Do this | Capture into slot |
+|---|------|---------|---|
+| 1 | Wallet loads at zero | Enter the player number (`0343500003`) in **WalletHeader** | — |
+| 2 | Deposit initiated | **Deposit** tab → amount → Deposit. State shows `pending`, a correlation ID is displayed | **Deposit initiation** slot |
+| — | Token acquired | (happens automatically behind step 2) | **Token response (redacted)** slot |
+| 3 | **(portal)** Approve the deposit | Open the transaction-approvals page, find the transaction by the correlation ID shown in the UI, and approve it | — |
+| 4 | Settlement arrives | Watch the UI: balance is credited, state becomes `completed`, either via the pending banner's poll or immediately after approval | **Status poll response** slot, and note whether it arrived by callback or by poll |
+| — | Callback captured | Check the ngrok inspector (`http://localhost:4040`) for the `PUT /api/mvola/callback` request; open it and read the body | **Callback body** slot |
+| 5 | Details match | Expand the settled row in **History**; compare MVola's record to the local one | **Transaction-details response** slot |
+| 6 | Play a round | **Play** tab → bet, heads/tails. Balance moves; no MVola call is made | — |
+| 7 | Cash-out submitted | **Cash-out** tab → amount → Cash out. Funds are reserved immediately; state shows `pending` | **Cash-out initiation** slot |
+| 7b | *(optional)* Reject instead | In the portal, reject the cash-out approval instead of accepting it; confirm the wallet is refunded | — |
+| 8 | **(portal)** Approve the cash-out | Same transaction-approvals page, this transaction's correlation ID | — |
+| 9 | Cash-out settles | Balance/state updates to `completed` | **Cash-out status/callback** slot |
+| 10 | Review history | **History** tab: both payments and the game round are present, each traceable to a real MVola reference | — |
+
+Record wall-clock time from "approved in portal" to "settlement visible in the app" for at
+least one of the two approvals — see the timing note below.
+
+### 4. After the run
+
+- Paste every captured payload into the Capture Log section below, redacting MSISDNs
+  (replace all but the last 3 digits, matching how `preflight` already masks them).
+- Copy the callback's observed field names into `docs/architecture/_shared.md` § Shared
+  message formats, in the slot marked for it.
+- Copy the details response's observed key set into the feature doc's API section, in the
+  slot marked for it.
+- Remove this section's reliance on any temporary verbose logging if you added any — none
+  should be needed, since the ngrok inspector already shows the raw callback body.
+
+## Capture Log — Live Run Evidence
+
+**Every block below must stay empty until it holds a real captured payload from this run.**
+Never fill these in by hand from memory, from the shapes documented elsewhere in this repo,
+or from what you expect MVola to return — a fabricated entry here would be indistinguishable
+from real evidence later, which is worse than leaving it empty. Redact MSISDNs before
+pasting (keep only the last 3 digits, e.g. `034…003`); never paste secret credential values.
+
+### Token response (redacted)
+
+```
+PASTE ACTUAL RESPONSE HERE — DO NOT FILL IN BY HAND
+(redact the access_token value itself — its presence and expires_in are enough)
+```
+
+### Deposit initiation response
+
+```
+PASTE ACTUAL RESPONSE HERE — DO NOT FILL IN BY HAND
+```
+
+### Status poll response(s) — deposit
+
+```
+PASTE ACTUAL RESPONSE HERE — DO NOT FILL IN BY HAND
+```
+
+### Callback body — deposit settlement (from the ngrok inspector)
+
+```
+PASTE ACTUAL RESPONSE HERE — DO NOT FILL IN BY HAND
+```
+
+### Transaction-details response — deposit
+
+```
+PASTE ACTUAL RESPONSE HERE — DO NOT FILL IN BY HAND
+```
+
+### Cash-out initiation response
+
+```
+PASTE ACTUAL RESPONSE HERE — DO NOT FILL IN BY HAND
+```
+
+### Status poll response(s) / callback body — cash-out settlement
+
+```
+PASTE ACTUAL RESPONSE HERE — DO NOT FILL IN BY HAND
+```
+
+### Observed timings
+
+```
+Approval (portal) → settlement visible in app: PASTE OBSERVED DURATION HERE
+Was MVOLA_POLL_TIMEOUT_MS (120s default) enough headroom? PASTE YES/NO + NOTE HERE
+```
+
+### Presenter comfort note (spec § 11)
+
+```
+Did the presenter perform both portal approvals live, or hand them to a second person?
+PASTE THE ANSWER HERE AFTER THE REHEARSAL
+```
 
 **If a transaction stays pending:** it is waiting for your approval, or the callback cannot
 reach you. Check the portal first, then ngrok's inspector at `http://localhost:4040`. The
@@ -173,6 +322,53 @@ npm start
 ```
 
 ## Troubleshooting
+
+### Predictable live-run failures (story 09-14)
+
+The four failures most likely to interrupt a live sandbox run, in the order to check them:
+
+### Tunnel expired (ngrok URL no longer resolves or changed)
+
+- Symptom: `npm run preflight` fails the "callback address" check, or a transaction never
+  settles despite being approved in the portal
+- Fix: confirm ngrok is still running in its terminal; if it restarted, the URL may have
+  changed (a reserved domain should prevent this — see Prerequisites). Update
+  `MVOLA_CALLBACK_URL` in `.env.local` to match, then re-run `npm run preflight`
+- ngrok's own inspector at `http://localhost:4040` shows whether *any* requests are arriving
+  at the tunnel at all, which narrows this down from "MVola isn't calling us" to "our tunnel
+  is down"
+
+### Credentials rejected
+
+- Symptom: `npm run preflight` fails the "MVola credentials" check, or `401 Unauthorized`
+  appears in the server log
+- Fix: re-check `MVOLA_CONSUMER_KEY` and `MVOLA_CONSUMER_SECRET` against the portal (typos,
+  stale copy-paste, or a regenerated secret invalidating the old one); confirm
+  `MVOLA_ENV=sandbox` is set so the token request targets `devapi.mvola.mg` and not
+  production
+
+### Transaction stuck pending
+
+- Symptom: the pending banner never clears after what should have been an approval
+- Most likely cause, in order: **(1)** it has not actually been approved yet — return to the
+  portal's transaction-approvals page; **(2)** the approval was performed on a *different*
+  transaction than the one being watched — cross-check the correlation ID shown in the UI
+  against the one approved in the portal; **(3)** the callback cannot reach the server (see
+  "callback never arrives" below) but polling should still catch the settlement within
+  `MVOLA_POLL_INTERVAL_MS` regardless
+- Reaching `MVOLA_POLL_TIMEOUT_MS` reports **still pending**, never failure — the wallet
+  never moves on a client-side timeout, and reloading resumes polling
+
+### Callback never arrives
+
+- Symptom: the transaction eventually settles by poll, but the ngrok inspector shows no
+  `PUT /api/mvola/callback` request at all
+- Fix: confirm `MVOLA_CALLBACK_URL` in `.env.local` matches the tunnel's current address
+  exactly, including the `/api/mvola/callback` path; re-run `npm run preflight`, which
+  specifically checks this address is reachable from outside the process
+- This is not fatal to the walkthrough — status polling reaches the same settled state
+  independently (rule R4) — but the callback body is one of the required captures for this
+  story, so it must be resolved before the run counts as complete for AC purposes
 
 ### `401 Unauthorized` from MVola
 - Check `MVOLA_CONSUMER_KEY` and `MVOLA_CONSUMER_SECRET` are correct
