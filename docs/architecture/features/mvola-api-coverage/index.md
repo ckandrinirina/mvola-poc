@@ -424,8 +424,9 @@ result into the slots that pass has prepared:
   inspector, before this item can close.
 - **Details response shape — still indicative.** The `mvola` object in the details response
   above is forwarded verbatim; its fields are drawn from the operation's purpose, not from a
-  captured 200. The details call was rejected during the 2026-07-28 verification because no
-  settled transaction reference existed to call it with. An empty capture slot now exists
+  captured 200. The details call was rejected during an earlier verification attempt because
+  no settled transaction reference existed to call it with (that attempt is undated in this
+  repo — do not infer a date for it). An empty capture slot now exists
   directly below the [details API response](#get-apimvolatransactiontransactionreference-new)
   above; it must be filled from a real successful call before this item can close.
 
