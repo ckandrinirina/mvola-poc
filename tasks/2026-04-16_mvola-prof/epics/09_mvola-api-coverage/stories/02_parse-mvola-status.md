@@ -2,7 +2,7 @@
 id: 09-02
 title: `parseMvolaStatus()` — Shared Status Reader + Type Corrections
 epic: 09
-status: todo
+status: done
 size: M
 blocked_by: [09-01]
 files: [src/lib/mvola/status.ts, src/lib/mvola/types.ts, src/lib/mvola/__tests__/status.test.ts, src/lib/mvola/__tests__/types.test.ts]
@@ -31,18 +31,18 @@ choice rather than hedging.
 
 ## Acceptance Criteria
 
-- [ ] `src/lib/mvola/status.ts` exports `parseMvolaStatus(payload: unknown): { status: TransactionStatus; reference?: string }`
-- [ ] Progress is read as `status ?? transactionStatus`
-- [ ] The settled reference is read as `objectReference ?? transactionReference`
-- [ ] An empty-string reference is normalised to `undefined`, never persisted as `""`
-- [ ] The status string is normalised to the `TransactionStatus` union
-- [ ] **An unrecognised, missing, or malformed status yields `"pending"` — never a terminal state.** A record must not settle because a payload was unreadable
-- [ ] `payload` being `null`, `undefined`, a string, or an array does not throw — each yields `"pending"`
-- [ ] `TransactionStatusResponse` in `types.ts` is corrected to MVola's real shape: `status` and `objectReference` required, `transactionStatus` and `transactionReference` optional
-- [ ] `CallbackPayload` keeps `transactionStatus`/`transactionReference` but makes them optional alongside optional `status`/`objectReference`
-- [ ] `TransactionDetailsResponse` and `TransactionComparison` (`{ mvola, local }`) are added to `types.ts`
-- [ ] Unit tests cover: both field spellings, both spellings present simultaneously, unknown status value, missing status, empty-string reference, and each non-object payload shape
-- [ ] `npx jest` still passes fully
+- [x] `src/lib/mvola/status.ts` exports `parseMvolaStatus(payload: unknown): { status: TransactionStatus; reference?: string }`
+- [x] Progress is read as `status ?? transactionStatus`
+- [x] The settled reference is read as `objectReference ?? transactionReference`
+- [x] An empty-string reference is normalised to `undefined`, never persisted as `""`
+- [x] The status string is normalised to the `TransactionStatus` union
+- [x] **An unrecognised, missing, or malformed status yields `"pending"` — never a terminal state.** A record must not settle because a payload was unreadable
+- [x] `payload` being `null`, `undefined`, a string, or an array does not throw — each yields `"pending"`
+- [x] `TransactionStatusResponse` in `types.ts` is corrected to MVola's real shape: `status` and `objectReference` required, `transactionStatus` and `transactionReference` optional
+- [x] `CallbackPayload` keeps `transactionStatus`/`transactionReference` but makes them optional alongside optional `status`/`objectReference`
+- [x] `TransactionDetailsResponse` and `TransactionComparison` (`{ mvola, local }`) are added to `types.ts`
+- [x] Unit tests cover: both field spellings, both spellings present simultaneously, unknown status value, missing status, empty-string reference, and each non-object payload shape
+- [x] `npx jest` still passes fully
 
 ## Technical Notes
 
@@ -101,3 +101,71 @@ and let 09-03 restructure it.
 
 - **Epic:** 09_mvola-api-coverage
 - **Spec reference:** pre-spec § 4, § 5.4; feature doc § `src/lib/mvola/status.ts`
+
+---
+
+## Implementation Summary
+
+**Completed:** 2026-07-28
+**TDD Iterations:** 2 (red→green→refactor cycles: `status.ts` + `parseMvolaStatus` tests; `types.ts` corrections + `types.test.ts` coverage)
+**QA Iterations:** 1
+**Manual-test bugs:** none
+**Tests written:** 25 (16 in `status.test.ts`, 9 added to `types.test.ts`)
+**Files created:** 2
+**Files modified:** 2
+**Unplanned changes:** none
+
+### What Was Implemented
+
+- `parseMvolaStatus(payload: unknown)` — the single shared interpretation of MVola's progress
+  reply, reading `status ?? transactionStatus` and `objectReference ?? transactionReference`,
+  normalising an empty-string reference to `undefined`, and defaulting any unrecognised,
+  missing, or malformed status to `"pending"` (never a terminal state).
+- Guards `null`, `undefined`, non-object primitives, and arrays explicitly (arrays are
+  `typeof "object"` too) so every malformed shape yields `"pending"` without throwing.
+- Corrected `TransactionStatusResponse` to MVola's verified shape: `status` and
+  `objectReference` required, `transactionStatus`/`transactionReference` kept as optional
+  legacy fields.
+- Relaxed `CallbackPayload` so all four status/reference fields (`status`, `objectReference`,
+  `transactionStatus`, `transactionReference`) are optional, since the callback's real field
+  spelling is unverified (story 09-14 records the first real delivery).
+- Added `TransactionDetailsResponse` (index-signature tolerant, every named field optional)
+  and `TransactionComparison` (`{ mvola, local }`, no verdict field) to `types.ts`.
+
+### Files Touched
+
+CREATED src/lib/mvola/status.ts
+CREATED src/lib/mvola/__tests__/status.test.ts
+MODIFIED src/lib/mvola/types.ts:55-122
+MODIFIED src/lib/mvola/__tests__/types.test.ts:16-32,218-369
+
+### SOLID Compliance
+
+- **SRP:** `status.ts` has exactly one job — normalise MVola's progress reply; `asPlainRecord`
+  and `isKnownStatus` are private helpers that exist only to keep `parseMvolaStatus` itself a
+  single, flat decision.
+- **OCP:** `KNOWN_STATUSES` + the `TransactionStatus` union is the one place a new status value
+  would be added; the parsing logic itself does not change shape.
+- **LSP:** not applicable — no subclassing or interface substitution in this module.
+- **ISP:** the module's public surface is exactly one function; the two helpers stay
+  module-private so no consumer can depend on internals it doesn't need.
+- **DIP:** `parseMvolaStatus` depends only on the `TransactionStatus` type, not on `fetch`, a
+  route, or a store — callers own supplying the untrusted payload.
+
+### Notes
+
+- **Known, deliberately deferred consequence (documented in this story's own Technical
+  Notes):** making `transactionStatus`/`transactionReference` optional on
+  `TransactionStatusResponse` (AC requirement) means `src/app/api/mvola/status/[correlationId]/route.ts:65`
+  and 7 mock literals in the legacy `src/__tests__/app/api/mvola/status/[correlationId]/route.test.ts`
+  no longer type-check under `npx tsc --noEmit` (they were written against the old
+  required-fields shape). Both files are outside this story's declared scope (`src/lib/mvola/status.ts`,
+  `src/lib/mvola/types.ts`, and their two test files only) and are explicitly owned by Story
+  09-03 ("Status Route — Remove the Sandbox Short-Circuit", `blocked_by: [09-02]`), which
+  rewrites that exact call site through `parseMvolaStatus()` and rewrites the legacy test file's
+  mocks. `npx jest --testPathIgnorePatterns=/node_modules/` was verified to still pass fully for
+  every suite this story could affect (357 total checks; the run's only failures are the 21
+  pre-existing `CoinFlipGame.test.tsx` failures belonging to Story 09-01, unrelated to and not
+  regressed by this change) — ts-jest does not fail a suite on this project's tsc-only
+  diagnostic (`tsconfig.json` sets `isolatedModules: true`, so cross-file assignability errors
+  do not block the transform). No file outside this story's declared scope was modified.
