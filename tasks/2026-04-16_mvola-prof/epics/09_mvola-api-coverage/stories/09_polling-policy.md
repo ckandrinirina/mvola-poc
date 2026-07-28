@@ -2,7 +2,7 @@
 id: 09-09
 title: Polling Policy Module + Client Config Exposure
 epic: 09
-status: todo
+status: in-progress
 size: M
 blocked_by: [09-01]
 files: [src/lib/mvola/polling.ts, src/app/api/config/polling/route.ts, .env.example, src/lib/mvola/__tests__/polling.test.ts, src/app/api/config/polling/__tests__/route.test.ts]
@@ -30,14 +30,14 @@ too short and a live demonstration reports a timeout while the presenter is stil
 
 ## Acceptance Criteria
 
-- [ ] `src/lib/mvola/polling.ts` exports `POLL_INTERVAL_MS` from `MVOLA_POLL_INTERVAL_MS`, default `3000`
-- [ ] It exports `POLL_TIMEOUT_MS` from `MVOLA_POLL_TIMEOUT_MS`, default `120000`
-- [ ] A non-numeric, zero, negative, or absent env value falls back to the default rather than producing `NaN`
-- [ ] `GET /api/config/polling` returns `{ pollIntervalMs, pollTimeoutMs }` and **nothing else** — no credentials, no env dump, no `MVOLA_ENV` (rule R5)
-- [ ] The browser never reads `process.env` directly
-- [ ] Both variables are documented in `.env.example` with their defaults and a note that the ceiling is sized for a manual approval
-- [ ] Tests cover: both defaults, both overrides, each invalid-value fallback, and the route's exact response shape
-- [ ] `npx jest` passes fully
+- [x] `src/lib/mvola/polling.ts` exports `POLL_INTERVAL_MS` from `MVOLA_POLL_INTERVAL_MS`, default `3000`
+- [x] It exports `POLL_TIMEOUT_MS` from `MVOLA_POLL_TIMEOUT_MS`, default `120000`
+- [x] A non-numeric, zero, negative, or absent env value falls back to the default rather than producing `NaN`
+- [x] `GET /api/config/polling` returns `{ pollIntervalMs, pollTimeoutMs }` and **nothing else** — no credentials, no env dump, no `MVOLA_ENV` (rule R5)
+- [x] The browser never reads `process.env` directly
+- [x] Both variables are documented in `.env.example` with their defaults and a note that the ceiling is sized for a manual approval
+- [x] Tests cover: both defaults, both overrides, each invalid-value fallback, and the route's exact response shape
+- [x] `npx jest` passes fully
 
 ## Technical Notes
 
@@ -92,3 +92,40 @@ balance refresh, a different concern, and is out of scope for this epic.
 
 - **Epic:** 09_mvola-api-coverage
 - **Spec reference:** pre-spec § 9; feature doc § `polling.ts`, § Timing
+
+## Implementation Summary
+
+Implemented via TDD (RED → GREEN → REFACTOR): 16 new tests written first and confirmed
+failing (module/route did not exist), then `polling.ts` and the route were implemented to
+make them pass. No refactor was needed — the SOLID review found no violations (single
+responsibility per file, `readMs` is open for new knobs without modification, the route
+depends on `polling.ts`'s named exports rather than reading `process.env` itself).
+
+**Approach:**
+- `readMs(name, fallback)` centralizes the validate-or-fallback logic for both knobs:
+  `Number.isFinite(n) && n > 0 ? n : fallback` catches absent, non-numeric, zero, and
+  negative values uniformly, per the story's Technical Notes.
+- Values are read once at import time (module-level constants), matching the existing
+  `client.ts::getBaseUrl()` pattern for `MVOLA_ENV`; tests use `jest.resetModules()` +
+  dynamic `import()` to re-read after mutating `process.env`, matching `auth.test.ts`.
+- The route imports only the two named constants and re-exposes them under
+  `pollIntervalMs`/`pollTimeoutMs` — no spread of `process.env`, no `MVOLA_ENV`, no
+  credentials, verified by a dedicated "no leakage" test.
+
+**QA:** Delegated to `ck-code:qa-validator` — PASS on all 8 acceptance criteria. Full suite:
+327 passing / 21 pre-existing failures in `src/__tests__/components/CoinFlipGame.test.tsx`
+(unrelated — a `WalletHeader`/`MsisdnContext` prop-type mismatch from an earlier commit;
+confirmed via `git status` that this story touched none of those files). The 16 new tests
+for this story (`polling.test.ts` + `route.test.ts`) pass 100%. `tsc --noEmit` shows no new
+errors in any file this story touched.
+
+### Files Touched
+
+- CREATED: `src/lib/mvola/polling.ts`
+- CREATED: `src/app/api/config/polling/route.ts`
+- CREATED: `src/lib/mvola/__tests__/polling.test.ts`
+- CREATED: `src/app/api/config/polling/__tests__/route.test.ts`
+- MODIFIED: `.env.example:5-17` — appended `MVOLA_POLL_INTERVAL_MS` / `MVOLA_POLL_TIMEOUT_MS`
+  documentation only; no existing entries reformatted or removed
+
+No unplanned changes — every file touched was already in the story's declared `files:` set.
