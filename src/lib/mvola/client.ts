@@ -5,15 +5,21 @@
  * - initiateWithdrawal(): POST to the merchant pay endpoint (merchant debits, player credits)
  * - initiateDeposit(): POST to the merchant pay endpoint (player debits, merchant credits)
  * - getTransactionStatus(): GET from the transaction status endpoint
+ * - getTransactionDetails(): GET from the transaction details endpoint (the fourth
+ *   and final MVola Merchant Pay operation — completes the API surface)
  *
- * Both transaction functions accept a `token` parameter (obtained from auth.ts) and attach
+ * All transaction functions accept a `token` parameter (obtained from auth.ts) and attach
  * all required headers defined in the MVola API specification.
  *
  * This is the single integration point for MVola transaction calls — no other
  * file in the codebase should call these MVola endpoints directly.
  */
 
-import type { WithdrawalResponse, TransactionStatusResponse } from "./types";
+import type {
+  WithdrawalResponse,
+  TransactionStatusResponse,
+  TransactionDetailsResponse,
+} from "./types";
 
 /**
  * Parameters for initiating a withdrawal.
@@ -214,4 +220,40 @@ export async function getTransactionStatus(
   await throwOnError(response, "transaction status endpoint");
 
   return response.json() as Promise<TransactionStatusResponse>;
+}
+
+/**
+ * Retrieves MVola's authoritative record of a settled transaction from the
+ * transaction details endpoint — the fourth and final MVola Merchant Pay
+ * operation. Given a settled transaction's reference, returns amounts, both
+ * parties, timestamps and final state as MVola holds them.
+ *
+ * GET {BASE_URL}/mvola/mm/transactions/type/merchantpay/1.0.0/{transactionReference}
+ *
+ * Per the MVola OpenAPI spec, this operation does not require the
+ * `partnerName` header the other operations do; sending it anyway is
+ * harmless, so `buildHeaders()` is reused unchanged rather than forked.
+ *
+ * @param transactionReference - The settled transaction's reference (URL-encoded into the path)
+ * @param token                - A valid MVola Bearer access token
+ * @returns The TransactionDetailsResponse, verbatim from MVola
+ * @throws {Error} When MVola returns a non-200 response
+ */
+export async function getTransactionDetails(
+  transactionReference: string,
+  token: string
+): Promise<TransactionDetailsResponse> {
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}/mvola/mm/transactions/type/merchantpay/1.0.0/${encodeURIComponent(
+    transactionReference
+  )}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: buildHeaders(token),
+  });
+
+  await throwOnError(response, "transaction details endpoint");
+
+  return response.json() as Promise<TransactionDetailsResponse>;
 }
