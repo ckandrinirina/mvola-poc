@@ -305,10 +305,12 @@ grant_type=client_credentials&scope=EXT_INT_MVOLA_SCOPE
 
 ### MVola webhook callback (PUT)
 
-> **Unverified.** No live webhook delivery has been captured, so it is not known whether the
-> callback uses the same `status` / `objectReference` names as the status response or the
-> `transactionStatus` / `transactionReference` names shown below. `parseMvolaStatus()`
-> accepts either. Record the observed shape here after the first real delivery.
+> **Unverified as of this writing.** No live webhook delivery has been captured, so it is
+> not known whether the callback uses the same `status` / `objectReference` names as the
+> status response or the `transactionStatus` / `transactionReference` names shown below.
+> `parseMvolaStatus()` accepts either, so this does not block correctness — only the
+> retirement of the redundant fallback is blocked on it. Story 09-14 exists to capture one
+> real delivery and record the observed shape in the slot immediately below.
 
 ```json
 {
@@ -321,6 +323,23 @@ grant_type=client_credentials&scope=EXT_INT_MVOLA_SCOPE
   "creditParty": [{ "key": "msisdn", "value": "0343500003" }]
 }
 ```
+
+> The block above is the *shape MVola's other endpoints use, shown for orientation only* —
+> it is **not** a capture. It must not be mistaken for observed evidence.
+
+**Observed callback field names (live capture):**
+
+```
+PASTE THE OBSERVED FIELD NAMES HERE — DO NOT FILL IN BY HAND.
+Captured via the ngrok inspector (http://localhost:4040) during the docs/architecture/
+dev-guide.md "Live Sandbox Walkthrough" runbook (story 09-14). Record only field *names*
+and status *values* observed on a real PUT /api/mvola/callback delivery — never paste an
+MSISDN or other personal data from the payload here.
+```
+
+This block remains empty until story 09-14's live run captures a real delivery. Once filled
+in, retire whichever of `status`/`objectReference` or `transactionStatus`/`transactionReference`
+the observed payload does not use, both here and in `parseMvolaStatus()`.
 
 ## Conventions
 
