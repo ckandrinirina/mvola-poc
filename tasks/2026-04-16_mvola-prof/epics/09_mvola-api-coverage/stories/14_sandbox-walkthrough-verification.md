@@ -2,7 +2,7 @@
 id: 09-14
 title: End-to-End Sandbox Walkthrough & Payload Capture
 epic: 09
-status: in-progress
+status: done
 size: M
 blocked_by: [09-03, 09-04, 09-05, 09-11, 09-12, 09-13]
 files: [docs/architecture/_shared.md, docs/architecture/features/mvola-api-coverage/index.md, docs/architecture/dev-guide.md]
@@ -39,7 +39,7 @@ to enable has been performed.
 
 - [x] `npm run preflight` passes before the run
 - [x] `npx jest` passes fully
-- [ ] `grep -rn "MVOLA_ENV" src/` returns **only** `client.ts::getBaseUrl()` (rule R2)
+- [x] `grep -rn "MVOLA_ENV" src/` returns **only** `client.ts::getBaseUrl()` (rule R2)
 - [x] `grep -rn "MVL-SANDBOX" src/` returns nothing
 - [x] Walkthrough step 1: entering the player's MSISDN loads the wallet at zero
 - [x] Step 2: a deposit returns MVola's correlation ID and sits `pending` with the approval banner shown
