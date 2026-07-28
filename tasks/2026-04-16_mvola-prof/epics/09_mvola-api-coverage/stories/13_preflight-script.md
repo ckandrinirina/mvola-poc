@@ -2,7 +2,7 @@
 id: 09-13
 title: `scripts/preflight.mjs` — Demo Preflight Check
 epic: 09
-status: todo
+status: in-progress
 size: M
 blocked_by: [09-01]
 files: [scripts/preflight.mjs, package.json, .env.example]
