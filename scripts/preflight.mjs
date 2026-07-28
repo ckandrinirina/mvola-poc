@@ -145,14 +145,39 @@ export async function checkCallback(env) {
     };
   }
 
+  // `fetch` refuses to send a URL with embedded Basic-auth userinfo — it throws
+  // a TypeError whose message echoes the offending URL *in full, credentials
+  // included*. Strip credentials ourselves before the request ever reaches
+  // fetch, so that error path (and the leak it would cause) never triggers.
+  // `new URL()` also doubles as the "is this even a valid URL" check, handled
+  // entirely on our side so its own error message (which may echo the raw
+  // input) never reaches the report either.
+  let requestUrl;
   try {
-    await fetchWithTimeout(url, { method: "GET" });
-    return { name: "callback address", ok: true, detail: `${url} reachable` };
+    const parsed = new URL(url);
+    parsed.username = "";
+    parsed.password = "";
+    requestUrl = parsed.toString();
+  } catch {
+    return {
+      name: "callback address",
+      ok: false,
+      detail: `${maskUrl(url)} invalid URL`,
+    };
+  }
+
+  try {
+    await fetchWithTimeout(requestUrl, { method: "GET" });
+    return {
+      name: "callback address",
+      ok: true,
+      detail: `${maskUrl(url)} reachable`,
+    };
   } catch (error) {
     return {
       name: "callback address",
       ok: false,
-      detail: `${url} unreachable (${describeError(error)})`,
+      detail: `${maskUrl(url)} unreachable (${describeError(error)})`,
     };
   }
 }
@@ -184,6 +209,36 @@ export function formatLine(result) {
   return `  ${mark} ${result.name.padEnd(28)} ${result.detail}`;
 }
 
+/**
+ * Masks an MSISDN for display — never print the full number. An MSISDN is PII
+ * and preflight is routinely run on a screen that is shared, projected, or
+ * recorded minutes before a demo. Showing that a merchant number is configured
+ * (and enough of it to sanity-check it's the right account) is useful; the
+ * full value is not needed for that and must never be echoed.
+ */
+export function maskMsisdn(msisdn) {
+  if (!msisdn) return "not set";
+  if (msisdn.length <= 3) return "set";
+  return `set (…${msisdn.slice(-3)})`;
+}
+
+/**
+ * Renders a URL for display with any embedded credentials or query values
+ * stripped — a callback URL could carry Basic-auth userinfo or a signed
+ * token/secret in its query string, and preflight must never echo those.
+ */
+export function maskUrl(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    parsed.username = "";
+    parsed.password = "";
+    const query = parsed.search ? " (query masked)" : "";
+    return `${parsed.origin}${parsed.pathname}${query}`;
+  } catch {
+    return "[unparsable URL]";
+  }
+}
+
 export async function runPreflight(env) {
   const results = [checkEnvVars(env)];
   // Every check below runs regardless of earlier failures — one broken thing
@@ -200,7 +255,10 @@ async function main() {
   if (env.MVOLA_ENV || env.MVOLA_MERCHANT_MSISDN) {
     const parts = [];
     if (env.MVOLA_ENV) parts.push(env.MVOLA_ENV);
-    if (env.MVOLA_MERCHANT_MSISDN) parts.push(`merchant ${env.MVOLA_MERCHANT_MSISDN}`);
+    // Never print the full MSISDN — see maskMsisdn() doc comment.
+    if (env.MVOLA_MERCHANT_MSISDN) {
+      parts.push(`merchant ${maskMsisdn(env.MVOLA_MERCHANT_MSISDN)}`);
+    }
     console.log(`  i ${"environment".padEnd(28)} ${parts.join(" · ")}`);
   }
 

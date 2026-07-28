@@ -104,9 +104,21 @@ independently callable functions (`parseEnvFile`, `loadEnv`, `checkEnvVars`,
 the file is executed directly, not on import. Env is read from `.env` (never `.env.local`)
 with an already-set `process.env` value always winning, so `MVOLA_CALLBACK_URL=... npm run
 preflight` works for one-off checks. No secret value (token, consumer key/secret) is ever
-printed — only presence/validity and the non-secret resolved `MVOLA_ENV` + merchant MSISDN.
+printed — only presence/validity and the non-secret resolved `MVOLA_ENV` + a masked merchant
+MSISDN (`maskMsisdn` — last 3 digits only). The callback URL is displayed through `maskUrl`,
+which strips any embedded Basic-auth userinfo and query string before display; the fetch
+itself is issued against a credential-stripped copy of the URL too, so a URL with embedded
+credentials can never reach `fetch`'s own "URL includes credentials" rejection — a path
+that would otherwise echo the full, unmasked URL (secrets included) in its error message.
 Failures print a single diagnostic line each (no stack traces); exit code is 0 only when
 every check passes.
+
+**Post-QA fix:** QA found the merchant MSISDN was printed in full in the environment info
+line, and (on re-audit) that a callback URL with embedded credentials or a secret query
+value would leak verbatim through `fetch`'s own validation error message. Both are fixed:
+`maskMsisdn`/`maskUrl` mask the displayed value, and `checkCallback` now strips credentials
+from the URL before it ever reaches `fetch`, closing the error-message leak at its source
+rather than only masking the successful-path display.
 
 **Testing approach:** no dedicated test file was added — the story's declared file scope
 is `scripts/preflight.mjs`, `package.json`, `.env.example` only, and the two
