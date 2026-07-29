@@ -34,17 +34,18 @@
 | 08 · Tabbed Ui | 08-05 | Refactor `WithdrawForm` → `CashOutForm` — Wallet-Aware | DONE | M | 06-03, 06-04, 06-05, 08-01 | epics/08_tabbed-ui/stories/05_cashout-form-refactor.md |
 | 08 · Tabbed Ui | 08-06 | `TransactionHistory` Component — Merged History List | DONE | M | 07-04, 08-01 | epics/08_tabbed-ui/stories/06_transaction-history-component.md |
 | 08 · Tabbed Ui | 08-07 | Compose `page.tsx` + `layout.tsx` | DONE | S | 08-01, 08-02, 08-03, 08-04, 08-05, 08-06 | epics/08_tabbed-ui/stories/07_page-composition.md |
-| 09 · Mvola Api Coverage | 09-01 | Repair the `CoinFlipGame` Test Suite | TODO | S | - | epics/09_mvola-api-coverage/stories/01_repair-coinflip-tests.md |
-| 09 · Mvola Api Coverage | 09-02 | `parseMvolaStatus()` — Shared Status Reader + Type Corrections | TODO | M | 09-01 | epics/09_mvola-api-coverage/stories/02_parse-mvola-status.md |
-| 09 · Mvola Api Coverage | 09-03 | Status Route — Remove the Sandbox Short-Circuit | TODO | M | 09-02 | epics/09_mvola-api-coverage/stories/03_status-route-real-mvola.md |
-| 09 · Mvola Api Coverage | 09-04 | Callback Route — Unified Interpretation | TODO | S | 09-02 | epics/09_mvola-api-coverage/stories/04_callback-unified-interpretation.md |
-| 09 · Mvola Api Coverage | 09-05 | Withdraw Route — Real Payout, No Auto-Complete Timer | TODO | M | 09-01 | epics/09_mvola-api-coverage/stories/05_withdraw-route-real-payout.md |
-| 09 · Mvola Api Coverage | 09-06 | Settled-Reference Retention + Lookup by `mvolaReference` | TODO | S | 09-01 | epics/09_mvola-api-coverage/stories/06_reference-retention.md |
-| 09 · Mvola Api Coverage | 09-07 | `getTransactionDetails()` — The Fourth MVola Operation | TODO | S | 09-01 | epics/09_mvola-api-coverage/stories/07_transaction-details-client.md |
-| 09 · Mvola Api Coverage | 09-08 | Details Route — `GET /api/mvola/transaction/[transactionReference]` | TODO | M | 09-06, 09-07 | epics/09_mvola-api-coverage/stories/08_transaction-details-route.md |
-| 09 · Mvola Api Coverage | 09-09 | Polling Policy Module + Client Config Exposure | TODO | M | 09-01 | epics/09_mvola-api-coverage/stories/09_polling-policy.md |
-| 09 · Mvola Api Coverage | 09-10 | `PendingApprovalBanner` Component | TODO | M | 09-09 | epics/09_mvola-api-coverage/stories/10_pending-approval-banner.md |
-| 09 · Mvola Api Coverage | 09-11 | Wire Polling Knobs and Banner into `DepositForm` / `CashOutForm` | TODO | M | 09-05, 09-10 | epics/09_mvola-api-coverage/stories/11_form-polling-wiring.md |
-| 09 · Mvola Api Coverage | 09-12 | `TransactionHistory` — Expandable Settled Row | TODO | L | 09-08, 09-10 | epics/09_mvola-api-coverage/stories/12_history-expandable-row.md |
-| 09 · Mvola Api Coverage | 09-13 | `scripts/preflight.mjs` — Demo Preflight Check | TODO | M | 09-01 | epics/09_mvola-api-coverage/stories/13_preflight-script.md |
-| 09 · Mvola Api Coverage | 09-14 | End-to-End Sandbox Walkthrough & Payload Capture | TODO | M | 09-03, 09-04, 09-05, 09-11, 09-12, 09-13 | epics/09_mvola-api-coverage/stories/14_sandbox-walkthrough-verification.md |
+| 09 · Mvola Api Coverage | 09-01 | Repair the `CoinFlipGame` Test Suite | DONE | S | - | epics/09_mvola-api-coverage/stories/01_repair-coinflip-tests.md |
+| 09 · Mvola Api Coverage | 09-02 | `parseMvolaStatus()` — Shared Status Reader + Type Corrections | DONE | M | 09-01 | epics/09_mvola-api-coverage/stories/02_parse-mvola-status.md |
+| 09 · Mvola Api Coverage | 09-03 | Status Route — Remove the Sandbox Short-Circuit | DONE | M | 09-02 | epics/09_mvola-api-coverage/stories/03_status-route-real-mvola.md |
+| 09 · Mvola Api Coverage | 09-04 | Callback Route — Unified Interpretation | DONE | S | 09-02 | epics/09_mvola-api-coverage/stories/04_callback-unified-interpretation.md |
+| 09 · Mvola Api Coverage | 09-05 | Withdraw Route — Real Payout, No Auto-Complete Timer | DONE | M | 09-01 | epics/09_mvola-api-coverage/stories/05_withdraw-route-real-payout.md |
+| 09 · Mvola Api Coverage | 09-06 | Settled-Reference Retention + Lookup by `mvolaReference` | DONE | S | 09-01 | epics/09_mvola-api-coverage/stories/06_reference-retention.md |
+| 09 · Mvola Api Coverage | 09-07 | `getTransactionDetails()` — The Fourth MVola Operation | DONE | S | 09-01 | epics/09_mvola-api-coverage/stories/07_transaction-details-client.md |
+| 09 · Mvola Api Coverage | 09-08 | Details Route — `GET /api/mvola/transaction/[transactionReference]` | DONE | M | 09-06, 09-07 | epics/09_mvola-api-coverage/stories/08_transaction-details-route.md |
+| 09 · Mvola Api Coverage | 09-09 | Polling Policy Module + Client Config Exposure | DONE | M | 09-01 | epics/09_mvola-api-coverage/stories/09_polling-policy.md |
+| 09 · Mvola Api Coverage | 09-10 | `PendingApprovalBanner` Component | DONE | M | 09-09 | epics/09_mvola-api-coverage/stories/10_pending-approval-banner.md |
+| 09 · Mvola Api Coverage | 09-11 | Wire Polling Knobs and Banner into `DepositForm` / `CashOutForm` | DONE | M | 09-05, 09-10 | epics/09_mvola-api-coverage/stories/11_form-polling-wiring.md |
+| 09 · Mvola Api Coverage | 09-12 | `TransactionHistory` — Expandable Settled Row | DONE | L | 09-08, 09-10 | epics/09_mvola-api-coverage/stories/12_history-expandable-row.md |
+| 09 · Mvola Api Coverage | 09-13 | `scripts/preflight.mjs` — Demo Preflight Check | DONE | M | 09-01 | epics/09_mvola-api-coverage/stories/13_preflight-script.md |
+| 09 · Mvola Api Coverage | 09-14 | End-to-End Sandbox Walkthrough & Payload Capture | DONE | M | 09-03, 09-04, 09-05, 09-11, 09-12, 09-13 | epics/09_mvola-api-coverage/stories/14_sandbox-walkthrough-verification.md |
+| 09 · Mvola Api Coverage | 09-15 | Deposit Route — Real Payment, No Auto-Complete Timer | DONE | M | 09-05 | epics/09_mvola-api-coverage/stories/15_deposit-route-real-payment.md |

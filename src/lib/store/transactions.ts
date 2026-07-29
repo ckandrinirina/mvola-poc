@@ -1,8 +1,9 @@
 /**
  * Transaction Store — in-memory log of every deposit and cash-out.
  *
- * Primary index:   Map<localTxId, TransactionRecord>
- * Secondary index: Map<correlationId, localTxId>  (for O(1) status lookups)
+ * Primary index:    Map<localTxId, TransactionRecord>
+ * Secondary index:  Map<correlationId, localTxId>    (for O(1) status lookups)
+ * Tertiary index:   Map<mvolaReference, localTxId>   (for O(1) lookup by settled reference)
  *
  * All maps are module-private; access is via the exported functions only.
  */
@@ -17,6 +18,7 @@ import {
 
 const byId = new Map<string, TransactionRecord>();
 const byCorrelationId = new Map<string, string>(); // correlationId → localTxId
+const byMvolaReference = new Map<string, string>(); // mvolaReference → localTxId
 
 // --- Input types ---
 
@@ -93,8 +95,25 @@ export function getTransactionById(
 }
 
 /**
+ * Looks up a transaction by its settled MVola reference (O(1) via tertiary index).
+ * An empty string never resolves — no reference is ever indexed under it.
+ */
+export function getTransactionByMvolaReference(
+  reference: string
+): TransactionRecord | undefined {
+  if (!reference) return undefined;
+  const localTxId = byMvolaReference.get(reference);
+  if (localTxId === undefined) return undefined;
+  return byId.get(localTxId);
+}
+
+/**
  * Updates the status of an existing transaction and optionally patches
  * `mvolaReference` and/or `walletSettled`.
+ *
+ * A falsy `patch.mvolaReference` (`undefined` or `""`) means "no new
+ * information" — it never clears a previously stored reference and is
+ * never indexed.
  *
  * @throws Error if the record does not exist.
  */
@@ -114,8 +133,9 @@ export function updateTransactionStatus(
     updatedAt: Date.now(),
   };
 
-  if (patch?.mvolaReference !== undefined) {
+  if (patch?.mvolaReference) {
     updated.mvolaReference = patch.mvolaReference;
+    byMvolaReference.set(patch.mvolaReference, localTxId);
   }
   if (patch?.walletSettled !== undefined) {
     updated.walletSettled = patch.walletSettled;
@@ -136,10 +156,11 @@ export function listTransactionsByMsisdn(msisdn: string): TransactionRecord[] {
 }
 
 /**
- * Clears both the primary and secondary maps.
+ * Clears the primary, secondary, and tertiary maps.
  * Intended for use in tests only.
  */
 export function resetAll(): void {
   byId.clear();
   byCorrelationId.clear();
+  byMvolaReference.clear();
 }

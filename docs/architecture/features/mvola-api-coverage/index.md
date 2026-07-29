@@ -1,7 +1,15 @@
 ---
 slug: mvola-api-coverage
-design: pending
+design: verified
 ---
+
+<!--
+design: verified — the design was exercised end-to-end against the MVola sandbox during
+story 09-14: 2 real deposits and 2 real cash-outs settled (each with an MVola reference),
+2 game rounds, and a live callback delivery captured. Two shapes remain observed for the
+withdraw direction only: the deposit details key set, and any non-`completed` status value.
+-->
+
 
 # MVola API Coverage & Demo Credibility
 
@@ -229,11 +237,61 @@ Retrieve MVola's authoritative record of a settled transaction alongside the loc
 ```
 
 > The exact key set inside `mvola` is whatever MVola returns and is forwarded unaltered —
-> the fields above are indicative. The response is **not** reshaped to match the local
-> record; making the two look alike would defeat the comparison.
+> the fields above are indicative **shape only, not a capture**. The response is **not**
+> reshaped to match the local record; making the two look alike would defeat the comparison.
 
 **Response (404):** `{ "error": "No local transaction carries that reference" }`
 **Response (502):** `{ "error": "MVola API error", "details": "..." }`
+
+**Observed key set — first successful call (live capture):**
+
+Captured from a real `GET /api/mvola/transaction/{reference}` call against a **settled
+sandbox cash-out** (not a deposit — see the caveat below). MSISDN and amount values are
+redacted; key names and structure are verbatim.
+
+```json
+{
+  "mvola": {
+    "amount": "<redacted>",
+    "currency": "Ar",
+    "requestDate": "<ISO-8601>",
+    "debitParty":  [{ "key": "msisdn", "value": "<redacted>" }],
+    "creditParty": [{ "key": "msisdn", "value": "<redacted>" }],
+    "fees":        [{ "feeAmount": "<redacted>" }],
+    "metadata": [
+      { "key": "originalTransactionResult",     "value": "0" },
+      { "key": "originalTransactionResultDesc", "value": "0" },
+      { "key": "XCorrelationId",                "value": "<uuid>" }
+    ],
+    "transactionStatus": "completed",
+    "creationDate": "<ISO-8601>",
+    "transactionReference": "<numeric string>"
+  },
+  "local": {
+    "localTxId": "<uuid>", "correlationId": "<uuid>", "msisdn": "<redacted>",
+    "direction": "withdraw", "amount": "<redacted>", "status": "completed",
+    "walletSettled": true, "createdAt": <epoch ms>, "updatedAt": <epoch ms>,
+    "mvolaReference": "<numeric string>"
+  }
+}
+```
+
+**Observed facts:**
+
+- The `mvola` object uses `transactionStatus` / `transactionReference` — consistent with the
+  callback, and confirming the details endpoint does not use the status endpoint's
+  `status` / `objectReference` spelling.
+- It carries **`creationDate` in addition to `requestDate`** — two distinct timestamps, and
+  `creationDate` was ~8 minutes earlier than `requestDate` on the observed record. Do not
+  assume either is "the" transaction time without checking which one you mean.
+- `metadata` includes `originalTransactionResult` and `originalTransactionResultDesc`, both
+  `"0"` on success. These do **not** appear in the callback payload.
+- The route's forward-unaltered contract holds: every key above came straight from MVola.
+
+**Caveat — this capture is from a cash-out, not a deposit.** The story text anticipated a
+deposit capture. The key set for a deposit is not yet observed and may differ (notably the
+`debitParty`/`creditParty` orientation is reversed). Treat the above as verified for the
+withdraw direction only.
 
 ### GET `/api/mvola/status/[correlationId]` (changed)
 
@@ -395,17 +453,36 @@ environment, and the refund-on-rejection path behind step 7b.
 
 ## Open items
 
-- **Callback payload field names — unverified.** No live MVola webhook delivery is captured
-  in this repo, so it is not known whether the callback uses `status`/`objectReference` (as
-  the status response does) or `transactionStatus`/`transactionReference` (as the current
-  code and `_shared.md` assume). `parseMvolaStatus()` accepts both, so this does not block
-  the work. Capture one real delivery during the first end-to-end sandbox run and record the
-  observed shape in [\_shared.md](../../_shared.md#shared-message-formats); the redundant
-  fallback can then be removed.
-- **Details response shape — indicative.** The `mvola` object in the details response is
-  forwarded verbatim; the fields shown above are drawn from the operation's purpose, not
-  from a captured 200. The details call was rejected during verification because no settled
-  reference existed to call it with. Confirm the real key set on the first successful call.
+Restated as of story 09-14's documentation pass — **both remain open**. Neither can be
+closed by writing; both require the operator to actually drive the sandbox walkthrough in
+`docs/architecture/dev-guide.md` § Live Sandbox Walkthrough — Operator Runbook and paste the
+result into the slots that pass has prepared:
+
+- **Callback payload field names — RESOLVED.** A real `PUT /api/mvola/callback` delivery was
+  captured via the ngrok inspector during the live walkthrough. MVola sends
+  **`transactionStatus` / `transactionReference`** — the spelling the code already assumed.
+  Recorded at [\_shared.md § Shared message formats](../../_shared.md#shared-message-formats).
+  **The `parseMvolaStatus()` fallback stays for now**: only one delivery, one status value
+  (`completed`), one direction (cash-out) has been observed, and the *status* endpoint
+  genuinely does use the other spelling. Retire the fallback only after a failed-transaction
+  callback and a deposit callback confirm the same names.
+- **Details response shape — RESOLVED for the withdraw direction.** A real successful
+  `GET /api/mvola/transaction/{reference}` call against a settled sandbox cash-out was
+  captured; the observed key set is recorded directly below the
+  [details API response](#get-apimvolatransactiontransactionreference-new) above. It revealed
+  two things the indicative shape did not show: a second timestamp (`creationDate`, distinct
+  from `requestDate`) and `originalTransactionResult` / `originalTransactionResultDesc` in
+  `metadata`. **Still open for deposits** — the capture is from a cash-out, and the
+  `debitParty`/`creditParty` orientation differs by direction.
+
+**Additional finding from this pass (not part of either Open item above, flagged for
+whoever picks this up next):** `grep -rn "MVOLA_ENV" src/` does **not** currently return only
+`client.ts::getBaseUrl()` as rule R2 requires — `src/lib/mvola/auth.ts:55`
+(`const env = process.env.MVOLA_ENV;`, used at `auth.ts:57-58` to compute its own token-endpoint
+base URL) reads `MVOLA_ENV` independently of `client.ts::getBaseUrl()`. This is a real R2 gap
+in `src/`, out of this story's file scope to fix (this story touches only
+`docs/architecture/*`), and should be raised as a follow-up fix before the epic is
+considered structurally complete.
 
 ## Shared dependencies
 

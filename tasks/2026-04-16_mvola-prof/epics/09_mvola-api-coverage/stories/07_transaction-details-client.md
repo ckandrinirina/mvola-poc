@@ -2,7 +2,7 @@
 id: 09-07
 title: `getTransactionDetails()` — The Fourth MVola Operation
 epic: 09
-status: todo
+status: done
 size: S
 blocked_by: [09-01]
 files: [src/lib/mvola/client.ts, src/lib/mvola/types.ts, src/lib/mvola/__tests__/client.test.ts]
@@ -30,14 +30,14 @@ stronger claim than "we exercise most of it", and with four operations it is ach
 
 ## Acceptance Criteria
 
-- [ ] `client.ts` exports `getTransactionDetails(transactionReference: string, token: string): Promise<TransactionDetailsResponse>`
-- [ ] It issues `GET {base}/mvola/mm/transactions/type/merchantpay/1.0.0/{transactionReference}`
-- [ ] The reference is URL-encoded into the path
-- [ ] It reuses `getBaseUrl()`, `buildHeaders()` and `throwOnError()` **unchanged** — no forked helper
-- [ ] A non-200 response throws via `throwOnError()` with a context label identifying this call
-- [ ] `TransactionDetailsResponse` is defined in `types.ts` with an index signature, so keys MVola returns but the type does not name are preserved rather than dropped
-- [ ] Tests cover: correct URL and method, headers present, reference encoding, 200 returns the parsed body verbatim, non-200 throws with the status and body in the message
-- [ ] `npx jest` passes fully
+- [x] `client.ts` exports `getTransactionDetails(transactionReference: string, token: string): Promise<TransactionDetailsResponse>`
+- [x] It issues `GET {base}/mvola/mm/transactions/type/merchantpay/1.0.0/{transactionReference}`
+- [x] The reference is URL-encoded into the path
+- [x] It reuses `getBaseUrl()`, `buildHeaders()` and `throwOnError()` **unchanged** — no forked helper
+- [x] A non-200 response throws via `throwOnError()` with a context label identifying this call
+- [x] `TransactionDetailsResponse` is defined in `types.ts` with an index signature, so keys MVola returns but the type does not name are preserved rather than dropped
+- [x] Tests cover: correct URL and method, headers present, reference encoding, 200 returns the parsed body verbatim, non-200 throws with the status and body in the message
+- [x] `npx jest` passes fully
 
 ## Technical Notes
 
@@ -99,3 +99,43 @@ so this uncertainty stays contained in one place.
 
 - **Epic:** 09_mvola-api-coverage
 - **Spec reference:** pre-spec § 3, § 5.1; feature doc § `getTransactionDetails`, § Open items
+
+## Implementation Summary
+
+Added `getTransactionDetails(transactionReference, token)` to `src/lib/mvola/client.ts`,
+completing the fourth and final MVola Merchant Pay operation. It issues `GET
+{base}/mvola/mm/transactions/type/merchantpay/1.0.0/{encodeURIComponent(transactionReference)}`,
+reusing `getBaseUrl()`, `buildHeaders()` and `throwOnError()` exactly as they exist — no
+forked helper was introduced. `TransactionDetailsResponse` (index-signature tolerant, all
+fields optional) was already present in `types.ts` from a merge with `main` (story 09-02's
+work); no change to that type was needed.
+
+Six new tests were added to `client.test.ts` following the file's existing per-function
+`describe` + `mockFetchSuccess`/`mockFetchError` convention: sandbox URL, production URL,
+reference URL-encoding (space and slash in the reference), headers via `buildHeaders()`,
+200 returning the body verbatim (including an unmapped key, proving the index signature
+holds), and non-200 throwing with both the status and body text in the message.
+
+**SOLID note (LEAN route, size S):** Single Responsibility — the new function stays in
+`client.ts`, the module whose one job is "talk to the MVola HTTP API"; no new file needed.
+Open/Closed — the function extends the module by reusing `getBaseUrl()`/`buildHeaders()`/
+`throwOnError()` unmodified, per the story's explicit "no forked helper" constraint.
+Dependency Inversion — `token` is passed in by the caller, no hidden global auth state.
+
+**Files Touched:**
+- MODIFIED: `src/lib/mvola/client.ts:1-14,16-19,242-273` (module header update + new
+  `getTransactionDetails()` function; `WithdrawalResponse`/`TransactionStatusResponse` import
+  extended to add `TransactionDetailsResponse`)
+- MODIFIED: `src/lib/mvola/__tests__/client.test.ts:1-15,679-816` (header comment update +
+  new `describe("client.ts — getTransactionDetails()")` block, 6 tests)
+- No change needed: `src/lib/mvola/types.ts` (`TransactionDetailsResponse` already present
+  from the `main` merge, matching the story's Technical Notes exactly)
+
+**QA:** Delegated to `ck-code:qa-validator` — PASS on all 8 acceptance criteria (file:line
+cited), full suite green (`npx jest --testPathIgnorePatterns=/node_modules/`: 26 suites /
+449 tests passing), no typecheck errors in this story's three files (pre-existing `tsc`
+errors in `src/app/api/mvola/status/[correlationId]/**`, owned by another in-flight story,
+confirmed present before this story's changes via `git stash`).
+
+Stopped before Phase 8.5 (manual-test gate) per parallel-build convention — the
+orchestrator runs manual testing after merge to the target branch.

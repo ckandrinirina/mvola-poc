@@ -6,22 +6,28 @@
  * records a pending TransactionRecord, and returns the correlation metadata
  * for the client to poll.
  *
- * Important: This route does NOT credit the wallet. Wallet credit happens
- * only after MVola confirms the transaction via the status or callback route.
+ * Important: This route does NOT credit the wallet. A deposit credits the
+ * wallet only on confirmed settlement, which MVola reports later through the
+ * callback webhook or a status poll; both reconcile through `reconcile.ts`
+ * (rule R3). The record therefore stays `pending` with `walletSettled=false`
+ * until MVola says otherwise.
+ *
+ * This route arms no timer and never completes a transaction itself (rule R1).
+ * It reads no environment variable either — `client.ts::getBaseUrl()` is the
+ * single place the target environment is selected, and it changes the base URL
+ * and nothing else (rule R2). In sandbox a deposit therefore stays `pending`
+ * until it is approved by hand in MVola's developer portal.
  *
  * Does NOT call the MVola API directly — delegates entirely to:
- * - getToken()         from auth.ts            (token acquisition + caching)
+ * - getToken()         from auth.ts             (token acquisition + caching)
  * - initiateDeposit()  from client.ts           (HTTP call to MVola merchant pay)
- * - createTransaction() from store/transactions  (records pending tx)
+ * - createTransaction() from store/transactions (records pending tx)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "@/lib/mvola/auth";
 import { initiateDeposit } from "@/lib/mvola/client";
-import { createTransaction, getTransactionByCorrelationId } from "@/lib/store/transactions";
-import { reconcileTransaction } from "@/lib/mvola/reconcile";
-
-const SANDBOX_AUTO_COMPLETE_MS = 3000;
+import { createTransaction } from "@/lib/store/transactions";
 
 /**
  * Initiates a deposit by validating the request, acquiring a token,
@@ -76,19 +82,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       correlationId: mvolaResponse.serverCorrelationId,
       walletSettled: false,
     });
-
-    // Sandbox demo: MVola sandbox never completes deposits (no customer
-    // authorization UI). Auto-fire the callback path after a short delay so
-    // the demo flows end-to-end. Production is untouched.
-    if (process.env.MVOLA_ENV !== "production") {
-      const timer = setTimeout(() => {
-        const latest = getTransactionByCorrelationId(record.correlationId);
-        if (latest && latest.status === "pending") {
-          reconcileTransaction(latest, "completed", `MVL-SANDBOX-${record.localTxId.slice(0, 8)}`);
-        }
-      }, SANDBOX_AUTO_COMPLETE_MS);
-      timer.unref?.();
-    }
 
     return NextResponse.json(
       {

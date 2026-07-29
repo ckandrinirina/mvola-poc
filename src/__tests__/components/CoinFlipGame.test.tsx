@@ -6,24 +6,88 @@ import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { CoinFlipGame } from "@/components/CoinFlipGame";
+import { WalletHeader } from "@/components/WalletHeader";
 
 // Mock fetch globally
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-// Mock context values
-const mockRefreshBalance = jest.fn();
-
-// Default context props for convenience
-const defaultProps = {
-  msisdn: "0343500003",
-  balance: 5000,
-  refreshBalance: mockRefreshBalance,
+// Mock localStorage (as in TransactionHistory.test.tsx)
+let localStorageStore: Record<string, string> = {};
+const localStorageMock = {
+  getItem: jest.fn((key: string) => localStorageStore[key] ?? null),
+  setItem: jest.fn((key: string, value: string) => {
+    localStorageStore[key] = value;
+  }),
+  removeItem: jest.fn((key: string) => {
+    delete localStorageStore[key];
+  }),
+  clear: jest.fn(() => {
+    localStorageStore = {};
+  }),
 };
+Object.defineProperty(window, "localStorage", { value: localStorageMock });
+
+/**
+ * Renders CoinFlipGame inside WalletHeader, which is the real provider of
+ * MsisdnContext. `msisdn` seeds localStorage (omit/empty to leave it unset);
+ * `balance` stubs the WalletHeader balance-poll response. The coinflip POST
+ * itself is routed separately per-test via mockFetch.mockImplementation.
+ */
+async function renderGame({ msisdn = "0343500003", balance = 5000 } = {}) {
+  if (msisdn) localStorageStore["mvola-prof.msisdn"] = msisdn;
+
+  mockFetch.mockImplementation((url: string) => {
+    if (url.includes("/balance")) {
+      return Promise.resolve({ ok: true, json: async () => ({ balance }) });
+    }
+    // Default coinflip stub; individual tests override with mockImplementation
+    // after this render call when they need a specific outcome.
+    return Promise.resolve({ ok: true, json: async () => ({}) });
+  });
+
+  let view: ReturnType<typeof render>;
+  await act(async () => {
+    view = render(
+      <WalletHeader>
+        <CoinFlipGame />
+      </WalletHeader>
+    );
+    await Promise.resolve();
+  });
+  return view!;
+}
+
+/** Routes mockFetch: balance requests get `balance`, everything else (the
+ * coinflip POST) gets `coinflipResponse`. */
+function mockCoinflipResponse(
+  balance: number,
+  coinflipResponse: { ok: boolean; status: number; json: () => Promise<unknown> }
+) {
+  mockFetch.mockImplementation((url: string) => {
+    if (url.includes("/balance")) {
+      return Promise.resolve({ ok: true, json: async () => ({ balance }) });
+    }
+    return Promise.resolve(coinflipResponse);
+  });
+}
 
 describe("CoinFlipGame", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorageStore = {};
+    localStorageMock.getItem.mockImplementation(
+      (key: string) => localStorageStore[key] ?? null
+    );
+    localStorageMock.setItem.mockImplementation((key: string, value: string) => {
+      localStorageStore[key] = value;
+    });
+    localStorageMock.removeItem.mockImplementation((key: string) => {
+      delete localStorageStore[key];
+    });
+    localStorageMock.clear.mockImplementation(() => {
+      localStorageStore = {};
+    });
     jest.useFakeTimers();
   });
 
@@ -34,57 +98,57 @@ describe("CoinFlipGame", () => {
 
   // ---- Disabled states ----
 
-  it("disables the flip button when msisdn is empty", () => {
-    render(<CoinFlipGame {...defaultProps} msisdn="" />);
+  it("disables the flip button when msisdn is empty", async () => {
+    await renderGame({ msisdn: "" });
     expect(screen.getByRole("button", { name: /flip/i })).toBeDisabled();
   });
 
-  it("disables the flip button when balance is 0", () => {
-    render(<CoinFlipGame {...defaultProps} balance={0} />);
+  it("disables the flip button when balance is 0", async () => {
+    await renderGame({ balance: 0 });
     expect(screen.getByRole("button", { name: /flip/i })).toBeDisabled();
   });
 
-  it("enables the flip button when msisdn and balance are set", () => {
-    render(<CoinFlipGame {...defaultProps} />);
+  it("enables the flip button when msisdn and balance are set", async () => {
+    await renderGame();
     expect(screen.getByRole("button", { name: /flip/i })).not.toBeDisabled();
   });
 
   // ---- Bet input ----
 
-  it("renders a bet amount input", () => {
-    render(<CoinFlipGame {...defaultProps} />);
+  it("renders a bet amount input", async () => {
+    await renderGame();
     expect(screen.getByRole("spinbutton")).toBeInTheDocument();
   });
 
-  it("caps bet input at current balance", () => {
-    render(<CoinFlipGame {...defaultProps} balance={3000} />);
+  it("caps bet input at current balance", async () => {
+    await renderGame({ balance: 3000 });
     const betInput = screen.getByRole("spinbutton") as HTMLInputElement;
     expect(betInput.max).toBe("3000");
   });
 
-  it("bet input has min of 1", () => {
-    render(<CoinFlipGame {...defaultProps} />);
+  it("bet input has min of 1", async () => {
+    await renderGame();
     const betInput = screen.getByRole("spinbutton") as HTMLInputElement;
     expect(betInput.min).toBe("1");
   });
 
   // ---- Heads / Tails selector ----
 
-  it("renders heads and tails choice buttons", () => {
-    render(<CoinFlipGame {...defaultProps} />);
+  it("renders heads and tails choice buttons", async () => {
+    await renderGame();
     expect(screen.getByRole("button", { name: /heads/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /tails/i })).toBeInTheDocument();
   });
 
-  it("selecting heads marks it as active", () => {
-    render(<CoinFlipGame {...defaultProps} />);
+  it("selecting heads marks it as active", async () => {
+    await renderGame();
     const headsBtn = screen.getByRole("button", { name: /heads/i });
     fireEvent.click(headsBtn);
     expect(headsBtn).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("selecting tails marks it as active", () => {
-    render(<CoinFlipGame {...defaultProps} />);
+  it("selecting tails marks it as active", async () => {
+    await renderGame();
     const tailsBtn = screen.getByRole("button", { name: /tails/i });
     fireEvent.click(tailsBtn);
     expect(tailsBtn).toHaveAttribute("aria-pressed", "true");
@@ -93,7 +157,8 @@ describe("CoinFlipGame", () => {
   // ---- Win rendering ----
 
   it("displays win banner in green on a win response", async () => {
-    mockFetch.mockResolvedValue({
+    await renderGame();
+    mockCoinflipResponse(5000, {
       ok: true,
       status: 200,
       json: async () => ({
@@ -105,18 +170,13 @@ describe("CoinFlipGame", () => {
       }),
     });
 
-    render(<CoinFlipGame {...defaultProps} />);
-
-    // Set bet
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
-    // Select heads
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));
-    // Click flip
+
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /flip/i }));
     });
 
-    // Fast-forward the 800ms animation delay
     await act(async () => {
       jest.advanceTimersByTime(800);
       await Promise.resolve();
@@ -133,7 +193,8 @@ describe("CoinFlipGame", () => {
   });
 
   it("displays outcome (heads/tails) on win", async () => {
-    mockFetch.mockResolvedValue({
+    await renderGame();
+    mockCoinflipResponse(5000, {
       ok: true,
       status: 200,
       json: async () => ({
@@ -144,8 +205,6 @@ describe("CoinFlipGame", () => {
         balanceAfter: 5500,
       }),
     });
-
-    render(<CoinFlipGame {...defaultProps} />);
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));
@@ -167,7 +226,8 @@ describe("CoinFlipGame", () => {
   });
 
   it("displays delta with sign on win", async () => {
-    mockFetch.mockResolvedValue({
+    await renderGame();
+    mockCoinflipResponse(5000, {
       ok: true,
       status: 200,
       json: async () => ({
@@ -178,8 +238,6 @@ describe("CoinFlipGame", () => {
         balanceAfter: 5500,
       }),
     });
-
-    render(<CoinFlipGame {...defaultProps} />);
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));
@@ -199,7 +257,8 @@ describe("CoinFlipGame", () => {
   });
 
   it("displays balanceAfter on win", async () => {
-    mockFetch.mockResolvedValue({
+    await renderGame();
+    mockCoinflipResponse(5000, {
       ok: true,
       status: 200,
       json: async () => ({
@@ -210,8 +269,6 @@ describe("CoinFlipGame", () => {
         balanceAfter: 5500,
       }),
     });
-
-    render(<CoinFlipGame {...defaultProps} />);
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));
@@ -233,7 +290,8 @@ describe("CoinFlipGame", () => {
   // ---- Loss rendering ----
 
   it("displays loss banner in red on a loss response", async () => {
-    mockFetch.mockResolvedValue({
+    await renderGame();
+    mockCoinflipResponse(5000, {
       ok: true,
       status: 200,
       json: async () => ({
@@ -244,8 +302,6 @@ describe("CoinFlipGame", () => {
         balanceAfter: 4500,
       }),
     });
-
-    render(<CoinFlipGame {...defaultProps} />);
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));
@@ -270,7 +326,8 @@ describe("CoinFlipGame", () => {
   });
 
   it("displays negative delta on loss", async () => {
-    mockFetch.mockResolvedValue({
+    await renderGame();
+    mockCoinflipResponse(5000, {
       ok: true,
       status: 200,
       json: async () => ({
@@ -281,8 +338,6 @@ describe("CoinFlipGame", () => {
         balanceAfter: 4500,
       }),
     });
-
-    render(<CoinFlipGame {...defaultProps} />);
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));
@@ -304,7 +359,8 @@ describe("CoinFlipGame", () => {
   // ---- 409 handling ----
 
   it("displays Insufficient funds on 409 response", async () => {
-    mockFetch.mockResolvedValue({
+    await renderGame();
+    mockCoinflipResponse(5000, {
       ok: false,
       status: 409,
       json: async () => ({
@@ -313,8 +369,6 @@ describe("CoinFlipGame", () => {
         requested: 500,
       }),
     });
-
-    render(<CoinFlipGame {...defaultProps} />);
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));
@@ -334,7 +388,8 @@ describe("CoinFlipGame", () => {
   });
 
   it("displays returned balance on 409 response", async () => {
-    mockFetch.mockResolvedValue({
+    await renderGame();
+    mockCoinflipResponse(5000, {
       ok: false,
       status: 409,
       json: async () => ({
@@ -343,8 +398,6 @@ describe("CoinFlipGame", () => {
         requested: 500,
       }),
     });
-
-    render(<CoinFlipGame {...defaultProps} />);
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));
@@ -366,7 +419,8 @@ describe("CoinFlipGame", () => {
   // ---- 400 handling ----
 
   it("displays validation message on 400 response", async () => {
-    mockFetch.mockResolvedValue({
+    await renderGame();
+    mockCoinflipResponse(5000, {
       ok: false,
       status: 400,
       json: async () => ({
@@ -374,8 +428,6 @@ describe("CoinFlipGame", () => {
         details: "bet must be a positive integer",
       }),
     });
-
-    render(<CoinFlipGame {...defaultProps} />);
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));
@@ -394,10 +446,11 @@ describe("CoinFlipGame", () => {
     });
   });
 
-  // ---- refreshBalance call ----
+  // ---- refreshBalance call (via context's balance re-fetch) ----
 
   it("calls refreshBalance on successful response", async () => {
-    mockFetch.mockResolvedValue({
+    await renderGame();
+    mockCoinflipResponse(5000, {
       ok: true,
       status: 200,
       json: async () => ({
@@ -409,7 +462,9 @@ describe("CoinFlipGame", () => {
       }),
     });
 
-    render(<CoinFlipGame {...defaultProps} />);
+    const balanceCallsBefore = mockFetch.mock.calls.filter(([url]) =>
+      String(url).includes("/balance")
+    ).length;
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));
@@ -424,12 +479,16 @@ describe("CoinFlipGame", () => {
     });
 
     await waitFor(() => {
-      expect(mockRefreshBalance).toHaveBeenCalledTimes(1);
+      const balanceCallsAfter = mockFetch.mock.calls.filter(([url]) =>
+        String(url).includes("/balance")
+      ).length;
+      expect(balanceCallsAfter).toBeGreaterThan(balanceCallsBefore);
     });
   });
 
   it("does not call refreshBalance on 409 response", async () => {
-    mockFetch.mockResolvedValue({
+    await renderGame();
+    mockCoinflipResponse(5000, {
       ok: false,
       status: 409,
       json: async () => ({
@@ -439,7 +498,9 @@ describe("CoinFlipGame", () => {
       }),
     });
 
-    render(<CoinFlipGame {...defaultProps} />);
+    const balanceCallsBefore = mockFetch.mock.calls.filter(([url]) =>
+      String(url).includes("/balance")
+    ).length;
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));
@@ -457,16 +518,24 @@ describe("CoinFlipGame", () => {
       expect(screen.getByText(/insufficient funds/i)).toBeInTheDocument();
     });
 
-    expect(mockRefreshBalance).not.toHaveBeenCalled();
+    const balanceCallsAfter = mockFetch.mock.calls.filter(([url]) =>
+      String(url).includes("/balance")
+    ).length;
+    expect(balanceCallsAfter).toBe(balanceCallsBefore);
   });
 
   // ---- Flipping animation ----
 
   it("shows flipping animation text while awaiting response", async () => {
-    // Never-resolving fetch so we can observe the flipping state
-    mockFetch.mockReturnValue(new Promise(() => {}));
-
-    render(<CoinFlipGame {...defaultProps} />);
+    await renderGame();
+    // Never-resolving fetch for the coinflip POST so we can observe the
+    // flipping state; balance route still resolves normally.
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes("/balance")) {
+        return Promise.resolve({ ok: true, json: async () => ({ balance: 5000 }) });
+      }
+      return new Promise(() => {});
+    });
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: /heads/i }));

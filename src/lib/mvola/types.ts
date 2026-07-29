@@ -55,25 +55,70 @@ export type TransactionStatus = "pending" | "completed" | "failed";
 /**
  * Response from the MVola transaction status endpoint
  * GET /mvola/mm/transactions/type/merchantpay/1.0.0/status/{serverCorrelationId}
+ *
+ * `status` and `objectReference` are MVola's verified field names (confirmed
+ * against the sandbox on 2026-07-28). `transactionStatus`/`transactionReference`
+ * are kept, optional, for the spelling the integration previously assumed —
+ * read both through `parseMvolaStatus()` (`src/lib/mvola/status.ts`) rather
+ * than accessing either pair directly.
  */
 export interface TransactionStatusResponse {
-  transactionStatus: TransactionStatus;
+  status: TransactionStatus;
+  objectReference: string;
   serverCorrelationId: string;
-  transactionReference: string;
+  transactionStatus?: TransactionStatus;
+  transactionReference?: string;
 }
 
 /**
  * Payload sent by MVola to the webhook callback URL
  * PUT /api/mvola/callback
+ *
+ * The callback's real field spelling is unverified (no live delivery has been
+ * captured — see story 09-14), so both the `status`/`objectReference` and
+ * `transactionStatus`/`transactionReference` spellings are accepted as
+ * optional. Read either through `parseMvolaStatus()`, never directly.
  */
 export interface CallbackPayload {
-  transactionStatus: TransactionStatus;
+  status?: TransactionStatus;
+  objectReference?: string;
+  transactionStatus?: TransactionStatus;
+  transactionReference?: string;
   serverCorrelationId: string;
-  transactionReference: string;
   amount: string;
   currency: string;
   debitParty: MVolaParty[];
   creditParty: MVolaParty[];
+}
+
+/**
+ * Response from the MVola transaction details endpoint
+ * GET /mvola/mm/transactions/type/merchantpay/1.0.0/{transactionReference}
+ *
+ * The exact key set MVola returns is not yet verified (see story 09-07) — an
+ * index signature preserves any key the type does not name rather than
+ * dropping it, and every named field is optional until a real 200 is
+ * captured (story 09-14).
+ */
+export interface TransactionDetailsResponse {
+  amount?: string;
+  currency?: string;
+  transactionReference?: string;
+  transactionStatus?: string;
+  createDate?: string;
+  debitParty?: MVolaParty[];
+  creditParty?: MVolaParty[];
+  [key: string]: unknown;
+}
+
+/**
+ * MVola's authoritative record of a settled transaction, presented beside
+ * this application's own record of it (`GET /api/mvola/transaction/{ref}`).
+ * Carries no verdict/match field — the comparison is presented, not asserted.
+ */
+export interface TransactionComparison {
+  mvola: TransactionDetailsResponse;
+  local: TransactionRecord;
 }
 
 // --- Domain types (new) ---

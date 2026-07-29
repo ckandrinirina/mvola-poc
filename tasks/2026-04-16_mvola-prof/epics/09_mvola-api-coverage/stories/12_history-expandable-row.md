@@ -2,7 +2,7 @@
 id: 09-12
 title: `TransactionHistory` — Expandable Settled Row
 epic: 09
-status: todo
+status: done
 size: L
 blocked_by: [09-08, 09-10]
 files: [src/components/TransactionHistory.tsx, src/__tests__/components/TransactionHistory.test.tsx]
@@ -33,20 +33,20 @@ No new tab and no modal — `TabbedLayout` is untouched.
 
 ## Acceptance Criteria
 
-- [ ] A settled row (`completed` / `failed`) with an `mvolaReference` exposes an expand control
-- [ ] Expanding fetches `GET /api/mvola/transaction/{mvolaReference}` **once**, lazily; collapsing and re-expanding does not refetch
-- [ ] The expanded panel renders MVola's record and the local record as two labelled columns, clearly attributed to their source
-- [ ] The MVola column renders whatever keys the response contains, without assuming a fixed field set
-- [ ] A `404` renders "No local transaction carries that reference"; a `502` renders the MVola error — **neither is filled in with a synthesised record**
-- [ ] A loading state is shown while the fetch is in flight; an error state is dismissible or retryable
-- [ ] A `pending` row renders `PendingApprovalBanner` instead of an expand control
-- [ ] A settled row **without** an `mvolaReference` shows why it cannot be opened (no reference was recorded at settlement) rather than a disabled or dead control
-- [ ] Game rows are unaffected
-- [ ] The expand control is keyboard-operable with `aria-expanded` reflecting state
-- [ ] `TabbedLayout` and the tab set are unchanged; no modal is introduced
-- [ ] The component still imports nothing from `src/lib/store/*` — everything goes through the API
-- [ ] Tests cover: expand fetches once, both columns render, collapse/re-expand does not refetch, 404 and 502 states, pending row shows the banner, settled-without-reference explanation, game rows untouched
-- [ ] `npx jest` passes fully
+- [x] A settled row (`completed` / `failed`) with an `mvolaReference` exposes an expand control
+- [x] Expanding fetches `GET /api/mvola/transaction/{mvolaReference}` **once**, lazily; collapsing and re-expanding does not refetch
+- [x] The expanded panel renders MVola's record and the local record as two labelled columns, clearly attributed to their source
+- [x] The MVola column renders whatever keys the response contains, without assuming a fixed field set
+- [x] A `404` renders "No local transaction carries that reference"; a `502` renders the MVola error — **neither is filled in with a synthesised record**
+- [x] A loading state is shown while the fetch is in flight; an error state is dismissible or retryable
+- [x] A `pending` row renders `PendingApprovalBanner` instead of an expand control
+- [x] A settled row **without** an `mvolaReference` shows why it cannot be opened (no reference was recorded at settlement) rather than a disabled or dead control
+- [x] Game rows are unaffected
+- [x] The expand control is keyboard-operable with `aria-expanded` reflecting state
+- [x] `TabbedLayout` and the tab set are unchanged; no modal is introduced
+- [x] The component still imports nothing from `src/lib/store/*` — everything goes through the API
+- [x] Tests cover: expand fetches once, both columns render, collapse/re-expand does not refetch, 404 and 502 states, pending row shows the banner, settled-without-reference explanation, game rows untouched
+- [x] `npx jest` passes fully
 
 ## Technical Notes
 
@@ -99,3 +99,39 @@ missing-reference explanation.
 
 - **Epic:** 09_mvola-api-coverage
 - **Spec reference:** pre-spec § 5.1, § 8 step 5; feature doc § `TransactionHistory`, § Flow C
+
+## Implementation Summary
+
+A settled row (`completed`/`failed`) carrying an `mvolaReference` now renders a
+`SettledRowComparison` affordance: a keyboard-operable `<button aria-expanded>` that, on
+first expand, lazily fetches `GET /api/mvola/transaction/{reference}` exactly once — a
+`useRef` fetch-guard (not component unmount) means collapsing and re-expanding, and even
+a parent-driven history refetch (the row survives because `TransactionRow` is keyed by
+`localTxId`), never re-fetch. The panel renders MVola's record and the local record as
+two separately labelled, source-attributed columns via a generic `RecordColumn` renderer
+that iterates `Object.entries()` — no fixed field set is assumed, and `debitParty`/
+`creditParty`-shaped arrays are formatted readably without special-casing the rest of the
+shape. A `404` renders the route's own message verbatim; a `502` renders `error` +
+`details` verbatim; neither path fabricates a record. A loading state and a retryable
+error state are both scoped to the row. A `pending` row renders `PendingApprovalBanner`
+(fed `pollTimeoutMs` from a new `/api/config/polling` fetch in `TransactionHistory`,
+falling back to a hardcoded default on failure) instead of the expand control. A settled
+row with no reference renders an explanatory sentence rather than a disabled/dead
+control. Game rows are untouched. No import from `src/lib/store/*`, `TabbedLayout`, or
+any API route was added or touched.
+
+**Files Touched:**
+- MODIFIED `src/components/TransactionHistory.tsx` — +199/-3 lines: added
+  `SettledRowComparison`, `RecordColumn`, `formatFieldValue`/`isPartyLike`, the
+  `/api/config/polling` fetch and `pollTimeoutMs` state in `TransactionHistory`, and
+  wired `PendingApprovalBanner` + the missing-reference explanation into `TransactionRow`
+- MODIFIED `src/__tests__/components/TransactionHistory.test.tsx` — +462/-4 lines: new
+  fixtures (`SETTLED_NO_REF_ENTRY`, `FAILED_TX_WITH_REF`, `MVOLA_COMPARISON_BODY`), a
+  `buildFetchMock` helper, and a new `describe("expandable settled row")` block covering
+  every acceptance criterion plus a regression test for expansion state surviving a
+  balance-triggered history refetch
+
+**QA:** delegated to `ck-code:qa-validator` — PASS on all 14 acceptance criteria; 567/567
+tests passing (29 suites); `npx tsc --noEmit` shows only the pre-existing, out-of-scope
+`scripts/__tests__/preflight.test.ts` NODE_ENV overload error (confirmed present before
+this story's changes via `git stash`).

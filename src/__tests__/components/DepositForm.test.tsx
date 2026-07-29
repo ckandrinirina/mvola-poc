@@ -210,7 +210,7 @@ describe("DepositForm", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/pending/i)).toBeInTheDocument();
+      expect(screen.getByText("Pending...")).toBeInTheDocument();
     });
   });
 
@@ -503,5 +503,214 @@ describe("DepositForm", () => {
     unmount();
 
     expect(clearIntervalSpy).toHaveBeenCalled();
+  });
+
+  it("clears the pending-ceiling timeout on unmount", async () => {
+    const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
+
+    mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+      if (options?.method === "POST") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ correlationId: "unmount-dep-002" }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/status/")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ transactionStatus: "pending" }),
+        });
+      }
+      return Promise.resolve(balanceOk);
+    });
+
+    const { unmount } = await act(async () => renderWithContext());
+    await setMsisdn("0343500003");
+
+    await fillAmount("500");
+    await submitForm();
+
+    unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+  });
+
+  // ---- Configured polling interval + ceiling (story 09-11) ----
+
+  it("polls at the pollIntervalMs returned by GET /api/config/polling, not the old hardcoded 3000", async () => {
+    mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/config/polling")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ pollIntervalMs: 5000, pollTimeoutMs: 120000 }),
+        });
+      }
+      if (options?.method === "POST") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ correlationId: "cfg-dep-001" }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/status/")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ transactionStatus: "pending" }),
+        });
+      }
+      return Promise.resolve(balanceOk);
+    });
+
+    await act(async () => { renderWithContext(); });
+    await setMsisdn("0343500003");
+
+    await fillAmount("500");
+    await submitForm();
+
+    const statusCallsAfterSubmit = mockFetch.mock.calls.filter(
+      (c) => typeof c[0] === "string" && (c[0] as string).includes("/status/")
+    ).length;
+
+    // The old hardcoded interval (3000 ms) must NOT trigger a poll now
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+    const statusCallsAt3000 = mockFetch.mock.calls.filter(
+      (c) => typeof c[0] === "string" && (c[0] as string).includes("/status/")
+    ).length;
+    expect(statusCallsAt3000).toBe(statusCallsAfterSubmit);
+
+    // Reaching the configured 5000 ms must trigger exactly one poll
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+      await Promise.resolve();
+    });
+    const statusCallsAt5000 = mockFetch.mock.calls.filter(
+      (c) => typeof c[0] === "string" && (c[0] as string).includes("/status/")
+    ).length;
+    expect(statusCallsAt5000).toBe(statusCallsAfterSubmit + 1);
+  });
+
+  it("reaches still-pending at pollTimeoutMs without calling refreshBalance or altering the balance", async () => {
+    let balanceFetchCount = 0;
+    mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/config/polling")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ pollIntervalMs: 3000, pollTimeoutMs: 7000 }),
+        });
+      }
+      if (options?.method === "POST") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ correlationId: "ceiling-dep-001" }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/status/")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ transactionStatus: "pending" }),
+        });
+      }
+      // balance fetch
+      balanceFetchCount++;
+      return Promise.resolve({ ok: true, json: async () => ({ balance: 1234 }) });
+    });
+
+    await act(async () => { renderWithContext(); });
+    await setMsisdn("0343500003");
+
+    await fillAmount("500");
+    await submitForm();
+
+    // Advance to just short of the 7000 ms ceiling (one intermediate poll at
+    // 3000/6000 stays pending). WalletHeader's own balance poll (every 2000 ms,
+    // unrelated to this story) also ticks in this window — that is expected and
+    // is not what this assertion is about.
+    await act(async () => {
+      jest.advanceTimersByTime(6000);
+      await Promise.resolve();
+    });
+    const balanceCallsAt6000 = balanceFetchCount;
+
+    // Cross the ceiling. WalletHeader's next periodic balance tick lands at 8000,
+    // not here — so any increase in this narrow window is our own refreshBalance,
+    // and none is expected: a timeout must never move the balance (rule R3).
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/still pending — waiting for mvola/i)
+      ).toBeInTheDocument();
+    });
+
+    // Never uses the word "failed" for this state
+    expect(screen.queryByText(/deposit failed/i)).not.toBeInTheDocument();
+
+    // refreshBalance must NOT have fired for the ceiling crossing itself
+    expect(balanceFetchCount).toBe(balanceCallsAt6000);
+
+    // Polling must have stopped — no further status calls after the ceiling
+    const statusCallsAtCeiling = mockFetch.mock.calls.filter(
+      (c) => typeof c[0] === "string" && (c[0] as string).includes("/status/")
+    ).length;
+
+    await act(async () => {
+      jest.advanceTimersByTime(10000);
+      await Promise.resolve();
+    });
+
+    const statusCallsAfter = mockFetch.mock.calls.filter(
+      (c) => typeof c[0] === "string" && (c[0] as string).includes("/status/")
+    ).length;
+    expect(statusCallsAfter).toBe(statusCallsAtCeiling);
+  });
+
+  it("renders PendingApprovalBanner while pending, with the submission time and pollTimeoutMs", async () => {
+    mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/config/polling")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ pollIntervalMs: 3000, pollTimeoutMs: 120000 }),
+        });
+      }
+      if (options?.method === "POST") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ correlationId: "banner-dep-001" }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/status/")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ transactionStatus: "pending" }),
+        });
+      }
+      return Promise.resolve(balanceOk);
+    });
+
+    await act(async () => { renderWithContext(); });
+    await setMsisdn("0343500003");
+
+    await fillAmount("500");
+    await submitForm();
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toBeInTheDocument();
+      expect(screen.getByText(/waiting for mvola approval/i)).toBeInTheDocument();
+    });
+
+    // Elapsed/remaining come from startedAt + pollTimeoutMs, not hardcoded
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/remaining budget/i)).toBeInTheDocument();
+    });
   });
 });

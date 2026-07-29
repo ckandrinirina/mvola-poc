@@ -10,6 +10,7 @@
  */
 
 import type { MVolaToken } from "./types";
+import { getBaseUrl } from "./base-url";
 
 interface CachedToken {
   access_token: string;
@@ -52,10 +53,8 @@ export async function getToken(): Promise<string> {
 async function fetchToken(): Promise<MVolaToken> {
   const key = process.env.MVOLA_CONSUMER_KEY ?? "";
   const secret = process.env.MVOLA_CONSUMER_SECRET ?? "";
-  const env = process.env.MVOLA_ENV;
 
-  const BASE_URL =
-    env === "production" ? "https://api.mvola.mg" : "https://devapi.mvola.mg";
+  const BASE_URL = getBaseUrl();
 
   const credentials = Buffer.from(`${key}:${secret}`).toString("base64");
 
